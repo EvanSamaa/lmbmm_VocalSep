@@ -487,3 +487,35 @@ def prepare_musdb():
     print("Test files x:", test_files_x)
     print("Test files s:", test_files_s)
     print("Test files d:", test_files_d)
+def prepare_NUS():
+    with open('./location_dict.json') as f:
+        dataset_path_dict = json.load(f)
+    path_to_dataset = os.path.join(dataset_path_dict["dataset_root"], 'Separation_data_sets/nus-smc-corpus_48/')
+    path_to_save_data = os.path.join(dataset_path_dict["dataset_root"], 'lmbmm_vocal_sep_data/NUS/')
+
+    wav_file_list = []
+    lyric_file_list = []
+
+    speakers = os.listdir(path_to_dataset)
+    for speaker in speakers:
+        if speaker != "README.txt":
+            # for each speaker
+            sing_folder = os.path.join(os.path.join(path_to_dataset, speaker), "sing")
+            file_for_folder = os.listdir(sing_folder)
+            file_for_folder.sort()
+            for file_name in file_for_folder:
+                if file_name[0] != "." and file_name[-3:] == "wav":
+                    wav_file_list.append(os.path.join(sing_folder, file_name))
+                elif file_name[0] != "." and file_name[-3:] == "txt":
+                    lyric_file_list.append(os.path.join(sing_folder, file_name))
+    wav_file_list.sort(key=lambda student: student[-6:-4])
+    lyric_file_list.sort(key=lambda student: student[-6:-4])
+
+    # iterate through the audio files
+    for i in range(0, len(wav_file_list)):
+        audio, fps = lb.load(wav_file_list[i])
+        lyric_content = open(lyric_file_list[i]).readlines()
+        # z score normalization
+        audio = (audio - audio.mean())/audio.std()
+        # iterate through phonemes in the lyrics
+        print(lyric_content)

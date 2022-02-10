@@ -1,5 +1,5 @@
 {
   "dataset_medusa":"/scratch/local/2021/Evan",
-  "dataset_root":"/Volumes/EVAN_DISK/MASC/",
-  "dataset_PC":"E:/MASC/Speech_data_set"
+  "dataset_mac":"/Volumes/EVAN_DISK/MASC/",
+  "dataset_root":"E:/MASC/"
 }
