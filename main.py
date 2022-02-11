@@ -2,4 +2,6 @@ import os
 import util.dataset_util as du
 
 if __name__ == "__main__":
-    du.prepare_NUS()
+    # du.prepare_NUS()
+    du.analyze_NUS()
+

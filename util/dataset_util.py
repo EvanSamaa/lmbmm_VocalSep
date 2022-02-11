@@ -5,7 +5,12 @@ import os
 import pickle
 import yaml
 import json
-
+import math
+import numpy as np
+from matplotlib import pyplot as plt
+from scipy.interpolate import interp1d
+import textgrids
+import parselmouth
 def prepare_musdb():
     """
     This script reads the MUSDB lyrics annotation files, cuts the audio
@@ -492,10 +497,8 @@ def prepare_NUS():
         dataset_path_dict = json.load(f)
     path_to_dataset = os.path.join(dataset_path_dict["dataset_root"], 'Separation_data_sets/nus-smc-corpus_48/')
     path_to_save_data = os.path.join(dataset_path_dict["dataset_root"], 'lmbmm_vocal_sep_data/NUS/')
-
-    wav_file_list = []
-    lyric_file_list = []
-
+    train_set = [[], []]
+    test_set = [[], []]
     speakers = os.listdir(path_to_dataset)
     for speaker in speakers:
         if speaker != "README.txt":
@@ -503,19 +506,165 @@ def prepare_NUS():
             sing_folder = os.path.join(os.path.join(path_to_dataset, speaker), "sing")
             file_for_folder = os.listdir(sing_folder)
             file_for_folder.sort()
-            for file_name in file_for_folder:
-                if file_name[0] != "." and file_name[-3:] == "wav":
-                    wav_file_list.append(os.path.join(sing_folder, file_name))
-                elif file_name[0] != "." and file_name[-3:] == "txt":
-                    lyric_file_list.append(os.path.join(sing_folder, file_name))
-    wav_file_list.sort(key=lambda student: student[-6:-4])
-    lyric_file_list.sort(key=lambda student: student[-6:-4])
+            if speaker in ["SAMF", "VKOW", "ZHIY"]:
+                for file_name in file_for_folder:
+                    if file_name[0] != "." and file_name[-3:] == "wav":
+                        test_set[0].append(os.path.join(sing_folder, file_name))
+                    elif file_name[0] != "." and file_name[-3:] == "txt":
+                        test_set[1].append(os.path.join(sing_folder, file_name))
+            else:
+                for file_name in file_for_folder:
+                    if file_name[0] != "." and file_name[-3:] == "wav":
+                        train_set[0].append(os.path.join(sing_folder, file_name))
+                    elif file_name[0] != "." and file_name[-3:] == "txt":
+                        train_set[1].append(os.path.join(sing_folder, file_name))
+    train_set[0].sort(key=lambda student: student[-6:-4])
+    train_set[1].sort(key=lambda student: student[-6:-4])
+    test_set[0].sort(key=lambda student: student[-6:-4])
+    test_set[1].sort(key=lambda student: student[-6:-4])
 
+    test_set_location = os.path.join(path_to_save_data, "test")
+    train_set_location = os.path.join(path_to_save_data, "train")
+
+    try:
+        os.mkdir(test_set_location)
+        os.mkdir(train_set_location)
+    except OSError:
+        print("Directory already exist")
+    # going through test set
+    counter = 0
     # iterate through the audio files
-    for i in range(0, len(wav_file_list)):
-        audio, fps = lb.load(wav_file_list[i])
-        lyric_content = open(lyric_file_list[i]).readlines()
+    for i in range(0, len(test_set[0])):
+        audio, fps = lb.load(test_set[0][i], sr=16000)
+        print(fps, test_set[0][i])
+        lyric_content = open(test_set[1][i]).readlines()
         # z score normalization
         audio = (audio - audio.mean())/audio.std()
         # iterate through phonemes in the lyrics
-        print(lyric_content)
+        start = 0
+        end = 0
+        phoneme_timings = []
+        for i in range(0, len(lyric_content)):
+            # try:
+            line = lyric_content[i].strip("\n")
+            t_start, t_end, phone = line.split()
+            # t_start = math.floor(float(t_start)*fps)
+            # t_end = math.floor(float(t_end)*fps)
+            if (phone == "sil" and len(phoneme_timings) >= 1) or (i==len(lyric_content)-1 and len(phoneme_timings) >= 1):
+                if phone != "sil":
+                    phoneme_timings.append([float(t_start), float(t_end), phone])
+                    end = float(t_end)
+                elif phone == "sil" and i==len(lyric_content)-1:
+                    phoneme_timings.append([float(t_start), float(t_end), phone])
+                    end = float(t_end)
+                if end - start >= 4 or i==len(lyric_content)-1:
+                    phonemme_transcript = textgrids.TextGrid()
+                    phonemme_transcript.xmin = start
+                    phonemme_transcript.xmax = end
+                    phonemme_transcript["phones"] = textgrids.Tier()
+                    for item in phoneme_timings:
+                        if item[2] == "sil":
+                            interval = textgrids.Interval(">", item[0], item[1])
+                            phonemme_transcript["phones"].append(interval)
+                        else:
+                            interval = textgrids.Interval(item[2].upper(), item[0], item[1])
+                            phonemme_transcript["phones"].append(interval)
+
+                    ############### save audio and textgrid ###############
+                    aud_file_save_path = os.path.join(test_set_location, "{}.pt".format(counter))
+                    # aud_file_save_path = os.path.join(test_set_location, "{}.wav".format(counter))
+                    aud_content = torch.from_numpy(audio[math.floor(start*fps):math.floor(end*fps)])
+                    torch.save(aud_content, aud_file_save_path)
+                    textgrid_save_path = os.path.join(test_set_location, "{}.TextGrid".format(counter))
+                    phonemme_transcript.write(textgrid_save_path)
+                    ############### manage tracking data
+                    phoneme_timings = [[float(t_start), float(t_end), phone]]
+                    start = float(t_end)
+                    counter = counter + 1
+            else:
+                if phone != "sp":
+                    phoneme_timings.append([float(t_start), float(t_end), phone])
+                end = float(t_end)
+    counter = 0
+    for i in range(0, len(train_set[0])):
+        audio, fps = lb.load(train_set[0][i], sr=16000)
+        print(fps, train_set[0][i])
+        lyric_content = open(train_set[1][i]).readlines()
+        # z score normalization
+        audio = (audio - audio.mean())/audio.std()
+        # iterate through phonemes in the lyrics
+        start = 0
+        end = 0
+        phoneme_timings = []
+        for i in range(0, len(lyric_content)):
+            # try:
+            line = lyric_content[i].strip("\n")
+            t_start, t_end, phone = line.split()
+            # t_start = math.floor(float(t_start)*fps)
+            # t_end = math.floor(float(t_end)*fps)
+            if (phone == "sil" and len(phoneme_timings) >= 1) or (i==len(lyric_content)-1 and len(phoneme_timings) >= 1):
+                if phone != "sil":
+                    phoneme_timings.append([float(t_start), float(t_end), phone])
+                    end = float(t_end)
+                elif phone == "sil" and i==len(lyric_content)-1:
+                    phoneme_timings.append([float(t_start), float(t_end), phone])
+                    end = float(t_end)
+                if end - start >= 4 or i==len(lyric_content)-1:
+                    phonemme_transcript = textgrids.TextGrid()
+                    phonemme_transcript.xmin = start
+                    phonemme_transcript.xmax = end
+                    phonemme_transcript["phones"] = textgrids.Tier()
+                    for item in phoneme_timings:
+                        if item[2] == "sil":
+                            interval = textgrids.Interval(">", item[0], item[1])
+                            phonemme_transcript["phones"].append(interval)
+                        else:
+                            interval = textgrids.Interval(item[2].upper(), item[0], item[1])
+                            phonemme_transcript["phones"].append(interval)
+
+                    ############### save audio and textgrid ###############
+                    aud_file_save_path = os.path.join(train_set_location, "{}.pt".format(counter))
+                    aud_content = torch.from_numpy(audio[math.floor(start*fps):math.floor(end*fps)])
+                    torch.save(aud_content, aud_file_save_path)
+                    textgrid_save_path = os.path.join(train_set_location, "{}.TextGrid".format(counter))
+                    phonemme_transcript.write(textgrid_save_path)
+                    ############### manage tracking data
+                    phoneme_timings = [[float(t_start), float(t_end), phone]]
+                    start = float(t_end)
+                    counter = counter + 1
+            else:
+                if phone != "sp":
+                    phoneme_timings.append([float(t_start), float(t_end), phone])
+                end = float(t_end)
+
+
+def analyze_NUS():
+    with open('./location_dict.json') as f:
+        dataset_path_dict = json.load(f)
+    test_set_path = os.path.join(dataset_path_dict["dataset_root"], 'lmbmm_vocal_sep_data/NUS/test/')
+    train_set_path = os.path.join(dataset_path_dict["dataset_root"], 'lmbmm_vocal_sep_data/NUS/train/')
+    total_time_test = 0
+    segment_lengths_test = []
+    total_time_train = 0
+    segment_lengths_train = []
+    test_files = os.listdir(test_set_path)
+    for i in range(0, 249):
+        aud = torch.load(os.path.join(test_set_path, "{}.pt".format(i)))
+        total_time_test = total_time_test + aud.shape[0]
+        segment_lengths_test.append(aud.shape[0]/16000.0)
+    for i in range(0, 739):
+        aud = torch.load(os.path.join(train_set_path, "{}.pt".format(i)))
+        total_time_train = total_time_train + aud.shape[0]
+        segment_lengths_train.append(aud.shape[0]/16000.0)
+    print(total_time_test/16000.0)
+    print(total_time_train/16000.0)
+    import seaborn as sns
+    sns.displot(segment_lengths_test, bins=50, kde=True)
+    plt.show()
+    sns.displot(segment_lengths_train, bins=50, kde=True)
+    plt.show()
+
+
+
+
+
