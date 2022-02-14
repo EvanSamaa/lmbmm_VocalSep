@@ -108,7 +108,7 @@ def train_model(specs, model):
     es = utils.EarlyStopping(patience=specs["patience"])
 
     if specs["pre_train_location"] != "":
-        model_path = Path(os.path.join('trained_models', specs["pre_train_location"])).expanduser()
+        model_path = Path(os.path.join('trained_models/', specs["pre_train_location"])).expanduser()
         with open(Path(model_path, "vocal" + '.json'), 'r') as stream:
             results = json.load(stream)
 
@@ -193,11 +193,11 @@ def train_model(specs, model):
 if __name__ == "__main__":
 
     # input dict
-    with open("training_specs/toy_example_unmix_pretrain.json") as f:
-        specs = json.load(f)
-    # input_specs
-    model_to_train = model.OpenUnmix(sample_rate=specs["sample_rate"], n_fft=specs["n_fft"], n_hop=specs["n_hop"])
-    train_model(specs, model_to_train)
+    # with open("training_specs/toy_example_unmix_pretrain.json") as f:
+    #     specs = json.load(f)
+    # # input_specs
+    # model_to_train = model.OpenUnmix(sample_rate=specs["sample_rate"], n_fft=specs["n_fft"], n_hop=specs["n_hop"])
+    # train_model(specs, model_to_train)
 
     with open("training_specs/toy_example_unmix.json") as f:
         specs = json.load(f)
