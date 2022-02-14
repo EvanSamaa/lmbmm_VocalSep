@@ -123,8 +123,9 @@ if __name__ == "__main__":
     for epoch in t:
         t.set_description("Training Epoch")
         end = time.time()
-        valid_loss, sdr_val, sar_val, sir_val = valid(specs, model, device, valid_sampler)
         train_loss = train(specs, model, device, train_sampler, optimizer)
+        valid_loss = valid(specs, model, device, valid_sampler)
+
         # valid_loss = valid(args, model, device, valid_sampler)
 
         writer.add_scalar("Training_cost", train_loss, epoch)
