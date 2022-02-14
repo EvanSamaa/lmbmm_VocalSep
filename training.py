@@ -109,7 +109,7 @@ def train_model(specs, model):
 
     if specs["pre_train_location"] != "":
         model_path = Path(os.path.join('trained_models/', specs["pre_train_location"])).expanduser()
-        with open(Path(model_path, "vocal" + '.json'), 'r') as stream:
+        with open(Path(os.path.join(model_path, "vocal" + '.json')), 'r') as stream:
             results = json.load(stream)
 
         target_model_path = Path(model_path, "vocal" + ".chkpnt")
