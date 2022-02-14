@@ -54,15 +54,7 @@ def valid(args, unmix, device, valid_sampler):
             losses.update(loss.item(), Y.size(1))
         return losses.avg #, sdr_avg.avg, sar_avg.avg, sir_avg.avg
 
-
-
-
-if __name__ == "__main__":
-
-    # input dict
-    with open("training_specs/toy_example_unmix.json") as f:
-        specs = json.load(f)
-    # input_specs
+def train_model(specs, model):
     model_path_name = specs["name"]
     sr = specs["sample_rate"]
     n_fft = specs["n_fft"]
@@ -81,22 +73,24 @@ if __name__ == "__main__":
     device = torch.device("cuda" if use_cuda else "cpu")
     print("Using GPU:", use_cuda)
     print("Using Torchaudio: ", utils._torchaudio_available())
-    model = model.OpenUnmix(sample_rate=sr, n_fft=n_fft, n_hop=n_hop)
     t = tqdm.trange(1, specs["epochs"] + 1)
     # save path
     target_path = Path("trained_models/{}/".format(model_path_name))
     target_path.mkdir(parents=True, exist_ok=True)
 
     # training and validation datasets
-    train_dataset = TIMITMusicTrain(None, fixed_length=True, mono=True)
+    if specs["dataset"] == "TIMIT":
+        train_dataset = TIMITMusicTrain(None, fixed_length=True, mono=True)
+        valid_dataset = TIMITMusicTest(None, fixed_length=True, size=500, mono=True)
+    elif specs["dataset"] == "NUS":
+        train_dataset = NUSMusicTrain(None, fixed_length=True, mono=True)
+        valid_dataset = NUSMusicTest(None, fixed_length=True, size=500, mono=True)
     train_sampler = torch.utils.data.DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True, drop_last=True,
     )
-    valid_dataset = TIMITMusicTest(None, fixed_length=True, size=500, mono=True)
     valid_sampler = torch.utils.data.DataLoader(
         valid_dataset, batch_size=batch_size, shuffle=True, drop_last=True,
     )
-
     # prep optimizer
     model.to(device)
     optimizer = torch.optim.Adam(
@@ -113,11 +107,35 @@ if __name__ == "__main__":
     )
     es = utils.EarlyStopping(patience=specs["patience"])
 
-    # preps
-    train_losses = []
-    valid_losses = []
-    train_times = []
-    best_epoch = 0
+    if specs["pre_train_location"] != "":
+        model_path = Path(os.path.join('trained_models', specs["pre_train_location"])).expanduser()
+        with open(Path(model_path, "vocal" + '.json'), 'r') as stream:
+            results = json.load(stream)
+
+        target_model_path = Path(model_path, "vocal" + ".chkpnt")
+        checkpoint = torch.load(target_model_path, map_location=device)
+
+
+        model.load_state_dict(checkpoint['state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        scheduler.load_state_dict(checkpoint['scheduler'])
+        # train for another arg.epochs
+        t = tqdm.trange(
+            results['epochs_trained'],
+            results['epochs_trained'] + specs["epochs"] + 1,
+        )
+        train_losses = results['train_loss_history']
+        valid_losses = results['valid_loss_history']
+        train_times = results['train_time_history']
+        best_epoch = 0
+
+    # else start from 0
+    else:
+        t = tqdm.trange(1, specs["epochs"] + 1)
+        train_losses = []
+        valid_losses = []
+        train_times = []
+        best_epoch = 0
 
     # training loop
     for epoch in t:
@@ -125,32 +143,25 @@ if __name__ == "__main__":
         end = time.time()
         train_loss = train(specs, model, device, train_sampler, optimizer)
         valid_loss = valid(specs, model, device, valid_sampler)
-
         # valid_loss = valid(args, model, device, valid_sampler)
-
         writer.add_scalar("Training_cost", train_loss, epoch)
         writer.add_scalar("Validation_cost", valid_loss, epoch)
-
         scheduler.step(valid_loss)
         train_losses.append(train_loss)
         valid_losses.append(valid_loss)
-
         t.set_postfix(
             train_loss=train_loss, val_loss=valid_loss
         )
-
         stop = es.step(valid_loss)
-
         if valid_loss == es.best:
             best_epoch = epoch
-
         utils.save_checkpoint({
-                'epoch': epoch + 1,
-                'state_dict': model.state_dict(),
-                'best_loss': es.best,
-                'optimizer': optimizer.state_dict(),
-                'scheduler': scheduler.state_dict()
-            },
+            'epoch': epoch + 1,
+            'state_dict': model.state_dict(),
+            'best_loss': es.best,
+            'optimizer': optimizer.state_dict(),
+            'scheduler': scheduler.state_dict()
+        },
             is_best=valid_loss == es.best,
             path=target_path,
             target="vocals"
@@ -168,7 +179,7 @@ if __name__ == "__main__":
             'num_bad_epochs': es.num_bad_epochs
         }
 
-        with open(Path(target_path,  "vocal" + '.json'), 'w') as outfile:
+        with open(Path(target_path, "vocal" + '.json'), 'w') as outfile:
             outfile.write(json.dumps(params, indent=4, sort_keys=True))
 
         train_times.append(time.time() - end)
@@ -176,3 +187,20 @@ if __name__ == "__main__":
         if stop:
             print("Apply Early Stopping")
             break
+
+
+
+if __name__ == "__main__":
+
+    # input dict
+    with open("training_specs/toy_example_unmix_pretrain.json") as f:
+        specs = json.load(f)
+    # input_specs
+    model = model.OpenUnmix(sample_rate=specs["sample_rate"], n_fft=specs["n_fft"], n_hop=specs["n_hop"])
+    train_model(specs, model)
+
+    with open("training_specs/toy_example_unmix.json") as f:
+        specs = json.load(f)
+    # input_specs
+    model = model.OpenUnmix(sample_rate=specs["sample_rate"], n_fft=specs["n_fft"], n_hop=specs["n_hop"])
+    train_model(specs, model)
