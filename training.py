@@ -196,11 +196,11 @@ if __name__ == "__main__":
     with open("training_specs/toy_example_unmix_pretrain.json") as f:
         specs = json.load(f)
     # input_specs
-    model = model.OpenUnmix(sample_rate=specs["sample_rate"], n_fft=specs["n_fft"], n_hop=specs["n_hop"])
-    train_model(specs, model)
+    model_to_train = model.OpenUnmix(sample_rate=specs["sample_rate"], n_fft=specs["n_fft"], n_hop=specs["n_hop"])
+    train_model(specs, model_to_train)
 
     with open("training_specs/toy_example_unmix.json") as f:
         specs = json.load(f)
     # input_specs
-    model = model.OpenUnmix(sample_rate=specs["sample_rate"], n_fft=specs["n_fft"], n_hop=specs["n_hop"])
-    train_model(specs, model)
+    model_to_train = model.OpenUnmix(sample_rate=specs["sample_rate"], n_fft=specs["n_fft"], n_hop=specs["n_hop"])
+    train_model(specs, model_to_train)
