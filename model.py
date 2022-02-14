@@ -19,6 +19,11 @@ class _Model(torch.nn.Module):
     def from_config(cls, config: dict):
         """ All models should have this class method """
         raise NotImplementedError
+class NoOp(nn.Module):
+    def __init__(self):
+        super().__init__()
+    def forward(self, x):
+        return x
 class STFT(nn.Module):
     def __init__(
         self,
