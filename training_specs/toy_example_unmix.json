@@ -5,7 +5,7 @@
   "n_hop": 1024,
   "name": "unmix_toy",
   "dataset": "NUS",
-  "pre_train_location": "/unmix_toy/",
+  "pre_train_location": "unmix_toy/",
   "seed": 0,
   "batch-size": 16,
   "lr": 0.001,
@@ -13,5 +13,5 @@
   "patience": 140,
   "lr-decay-patience": 80,
   "lr-decay-gamma": 0.3,
-  "epochs": 100
+  "epochs": 1000
 }
