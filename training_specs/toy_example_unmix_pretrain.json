@@ -1,9 +1,8 @@
 {
   "name": "toy_example_unmix_pretrain",
   "sample_rate": 16000,
-  "n_fft": 4096,
-  "n_hop": 1024,
-  "name": "unmix_toy",
+  "n_fft": 512,
+  "n_hop": 256,
   "dataset": "TIMIT",
   "pre_train_location": "",
   "seed": 0,

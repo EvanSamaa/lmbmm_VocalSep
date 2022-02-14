@@ -18,6 +18,7 @@ def train(args, unmix, device, train_sampler, optimizer):
         y = data[1]  # target
         z = data[2]  # text
         x, y, z = x.to(device), y.to(device), z.to(device)
+        print(x.shape)
         optimizer.zero_grad()
         # if args.alignment_from:
         #     inputs = (x, z, data[3].to(device))  # add attention weights to input
@@ -192,12 +193,12 @@ def train_model(specs, model):
 
 if __name__ == "__main__":
 
-    # input dict
-    with open("training_specs/toy_example_unmix_pretrain.json") as f:
-        specs = json.load(f)
-    # input_specs
-    model_to_train = model.OpenUnmix(sample_rate=specs["sample_rate"], n_fft=specs["n_fft"], n_hop=specs["n_hop"], input_is_spectrogram=True)
-    train_model(specs, model_to_train)
+    # # input dict
+    # with open("training_specs/toy_example_unmix_pretrain.json") as f:
+    #     specs = json.load(f)
+    # # input_specs
+    # model_to_train = model.OpenUnmix(sample_rate=specs["sample_rate"], n_fft=specs["n_fft"], n_hop=specs["n_hop"], input_is_spectrogram=True)
+    # train_model(specs, model_to_train)
 
     with open("training_specs/toy_example_unmix.json") as f:
         specs = json.load(f)

@@ -1,11 +1,10 @@
 {
-  "name": "toy_example_unmix",
   "sample_rate": 16000,
   "n_fft": 4096,
   "n_hop": 1024,
-  "name": "unmix_toy",
+  "name": "unmix_toy_NUS_ONLY",
   "dataset": "NUS",
-  "pre_train_location": "unmix_toy/",
+  "pre_train_location": "",
   "seed": 0,
   "batch-size": 16,
   "lr": 0.001,
