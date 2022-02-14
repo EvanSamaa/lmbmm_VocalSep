@@ -18,7 +18,6 @@ def train(args, unmix, device, train_sampler, optimizer):
         y = data[1]  # target
         z = data[2]  # text
         x, y, z = x.to(device), y.to(device), z.to(device)
-        print(x.shape)
         optimizer.zero_grad()
         # if args.alignment_from:
         #     inputs = (x, z, data[3].to(device))  # add attention weights to input
