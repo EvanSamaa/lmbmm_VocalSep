@@ -13,5 +13,5 @@
   "patience": 140,
   "lr-decay-patience": 80,
   "lr-decay-gamma": 0.3,
-  "epochs": 100
+  "epochs": 1
 }
