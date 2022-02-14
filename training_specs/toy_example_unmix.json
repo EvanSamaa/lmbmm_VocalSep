@@ -1,7 +1,7 @@
 {
   "sample_rate": 16000,
-  "n_fft": 4096,
-  "n_hop": 1024,
+  "n_fft": 512,
+  "n_hop": 256,
   "name": "unmix_toy_NUS_ONLY",
   "dataset": "NUS",
   "pre_train_location": "",
