@@ -28,8 +28,6 @@ import model_utls
 
 
 tqdm.monitor_interval = 0
-
-
 def train(args, unmix, device, train_sampler, optimizer):
     losses = utils.AverageMeter()
     unmix.train()
@@ -55,8 +53,6 @@ def train(args, unmix, device, train_sampler, optimizer):
         optimizer.step()
         losses.update(loss.item(), Y.size(1))
     return losses.avg
-
-
 def valid(args, unmix, device, valid_sampler):
     losses = utils.AverageMeter()
 
@@ -79,8 +75,6 @@ def valid(args, unmix, device, valid_sampler):
 
             losses.update(loss.item(), Y.size(1))
         return losses.avg #, sdr_avg.avg, sar_avg.avg, sir_avg.avg
-
-
 def get_statistics(args, dataset):
 
     # dataset is an instance of a torch.utils.data.Dataset class
