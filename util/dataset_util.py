@@ -636,8 +636,6 @@ def prepare_NUS():
                 if phone != "sp":
                     phoneme_timings.append([float(t_start), float(t_end), phone])
                 end = float(t_end)
-
-
 def analyze_NUS():
     with open('./location_dict.json') as f:
         dataset_path_dict = json.load(f)
@@ -663,7 +661,6 @@ def analyze_NUS():
     plt.show()
     sns.displot(segment_lengths_train, bins=50, kde=True)
     plt.show()
-
 
 
 

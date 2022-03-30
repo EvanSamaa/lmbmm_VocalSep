@@ -55,8 +55,6 @@ def train(args, unmix, device, train_sampler, optimizer):
         optimizer.step()
         losses.update(loss.item(), Y.size(1))
     return losses.avg
-
-
 def valid(args, unmix, device, valid_sampler):
     losses = utils.AverageMeter()
 
@@ -79,8 +77,6 @@ def valid(args, unmix, device, valid_sampler):
 
             losses.update(loss.item(), Y.size(1))
         return losses.avg #, sdr_avg.avg, sar_avg.avg, sir_avg.avg
-
-
 def get_statistics(args, dataset):
 
     # dataset is an instance of a torch.utils.data.Dataset class
@@ -131,8 +127,6 @@ def get_statistics(args, dataset):
         1e-4*np.max(scaler.scale_)  # np.max = np.amax, it returns the max element of one array
     )
     return scaler.mean_, std
-
-
 def main():
     parser = argparse.ArgumentParser(description='Open Unmix Trainer')
 
