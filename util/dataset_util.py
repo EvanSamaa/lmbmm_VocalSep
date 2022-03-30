@@ -9,8 +9,157 @@ import math
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.interpolate import interp1d
+import soundfile as sf
 import textgrids
 import parselmouth
+import timit_utils as tu
+
+TIMIT2CMU = {
+    "iy":"iy",
+    "ih":"ih",
+    "eh":"eh",
+    "ey":"ey",
+    "ae":"ae",
+    "aa":"aa",
+    "aw":"aw",
+    "ay":"ay",
+    "ah":"ah",
+    "ao":"ao",
+    "oy":"oy",
+    "ow":"ow",
+    "uh":"uh",
+    "uw":"uw",
+    "ux":"uw",
+    "er":"er",
+    "ax":"ah",
+    "ix":"ih",
+    "axr":"er",
+    "ax-h":"ah",
+    "jh":"jh",
+    "ch":"ch",
+    "b":"b",
+    "d":"d",
+    "g":"g",
+    "p":"p",
+    "t":"t",
+    "k":"k",
+    "dx":"d",
+    "s":"s",
+    "sh":"sh",
+    "z":"z",
+    "zh":"zh",
+    "f":"f",
+    "th":"th",
+    "v":"v",
+    "dh":"dh",
+    "m":"m",
+    "n":"n",
+    "ng":"ng",
+    "em":["ah", "m"],
+    "nx":["n", "er"],
+    "en":["ah", "n"],
+    "eng":["ah", "n"],
+    "l":"l",
+    "r":"r",
+    "w":"w",
+    "y":"y",
+    "hh":"hh",
+    "hv":"eh",
+    "el":"ah",
+    "bcl":"b",
+    "dcl":"d",
+    "gcl":"g",
+    "pcl":"p",
+    "tcl":"t",
+    "kcl":"k",
+    "q":"k",
+    "pau":">",
+    "epi":">",
+    "h#": ">",
+
+}
+CMU_VOCAB = ['#', '$', '%', '>', '-', 'AA', 'AE', 'AH', 'AO', 'AW', 'AY', 'B', 'CH', 'D', 'DH', 'EH', 'ER', 'EY', 'F', 'G',
+                  'HH', 'IH', 'IY', 'JH', 'K', 'L', 'M', 'N', 'NG', 'OW', 'OY', 'P', 'R', 'S', 'SH', 'T', 'TH', 'UH',
+                  'UW', 'V', 'W', 'Y', 'Z', 'ZH']
+
+def get_timit_train_sentence(idx, timit_training_set):
+    # the training set for this project comprises the first 4320 sentences of the TIMIT training partition
+    # the persons are not sorted by dialect regions when accessed with .person_by_index, which ensures that all
+    # dialect regions are represented in both the training and validation set
+    person_idx = int(np.floor(idx / 10))
+    person = timit_training_set.person_by_index(person_idx)
+    sentence_idx = idx % 10
+    sentence = person.sentence_by_index(sentence_idx)
+    audio = sentence.raw_audio
+    words = sentence.words_df.index.values
+    phone_onset = sentence.phones_df['start'].values
+    phone_offset = sentence.phones_df['end'].values
+    phonemes = sentence.phones_df.index.values
+    return audio, phonemes, phone_onset, phone_offset, words
+def get_timit_val_sentence(idx, timit_training_set):
+    # the validation set for this project comprises the last 300 sentences of the TIMIT training partition minus
+    # the first two sentences per speaker (SA1, SA2) resulting in 240 utterance in total.
+    # the persons are not sorted by dialect regions when accessed with .person_by_index, which ensures that all
+    # dialect regions are represented in both the training and validation set
+    person_idx = int(np.floor(idx / 8)) + 432
+    person = timit_training_set.person_by_index(person_idx)
+    sentence_idx = (idx % 8) + 2  # to ignore sentences 0 and 1 (SA1 and SA2), because they are also in training set
+    sentence = person.sentence_by_index(sentence_idx)
+    audio = sentence.raw_audio
+    words = sentence.words_df.index.values
+    phone_onset = sentence.phones_df['start'].values
+    phone_offset = sentence.phones_df['end'].values
+    phonemes = sentence.phones_df.index.values
+    return audio, phonemes, phone_onset, phone_offset, words
+def get_timit_test_sentence(idx, timit_test_set):
+
+    person_idx = int(np.floor(idx / 8))
+    person = timit_test_set.person_by_index(person_idx)
+    sentence_idx = (idx % 8) + 2  # to ignore sentences 0 and 1 (SA1 and SA2), because they are also in training set
+    sentence = person.sentence_by_index(sentence_idx)
+    audio = sentence.raw_audio
+    words = sentence.words_df.index.values
+    phone_onset = sentence.phones_df['start'].values
+    phone_offset = sentence.phones_df['end'].values
+    phonemes = sentence.phones_df.index.values
+    return audio, phonemes, phone_onset, phone_offset, words
+def timit_sentence_to_cmu(timit_phone_list, timit_phone_start_list, timit_phone_end_list):
+    cmu_phone_list, cmu_phone_start_list, cmu_phone_end_list = [[], [], []]
+    for i in range(0, len(timit_phone_list)):
+        timit_phone = timit_phone_list[i]
+        cmu_phone = TIMIT2CMU[timit_phone]
+        if timit_phone in ["em", "en", "eng"]:
+            start = timit_phone_start_list[i]
+            mid = timit_phone_end_list[i] - 2000
+            end = timit_phone_end_list[i]
+            if mid <= (start + end) / 2:
+                mid = (start + end) / 2
+            cmu_phone_list.append(cmu_phone[0])
+            cmu_phone_start_list.append(start)
+            cmu_phone_end_list.append(mid)
+
+            cmu_phone_list.append(cmu_phone[1])
+            cmu_phone_start_list.append(mid)
+            cmu_phone_end_list.append(end)
+        elif timit_phone in ["nx"]:
+            start = timit_phone_start_list[i]
+            mid = timit_phone_start_list[i] + 2000
+            end = timit_phone_end_list[i]
+            if mid >= (start + end) / 2:
+                mid = (start + end) / 2
+            cmu_phone_list.append(cmu_phone[0])
+            cmu_phone_start_list.append(start)
+            cmu_phone_end_list.append(mid)
+
+            cmu_phone_list.append(cmu_phone[1])
+            cmu_phone_start_list.append(mid)
+            cmu_phone_end_list.append(end)
+        else:
+            cmu_phone_list.append(cmu_phone)
+            cmu_phone_start_list.append(timit_phone_start_list[i])
+            cmu_phone_end_list.append(timit_phone_end_list[i])
+    return cmu_phone_list, cmu_phone_start_list, cmu_phone_end_list
+
 def prepare_musdb():
     """
     This script reads the MUSDB lyrics annotation files, cuts the audio
@@ -539,7 +688,7 @@ def prepare_NUS():
         print(fps, test_set[0][i])
         lyric_content = open(test_set[1][i]).readlines()
         # z score normalization
-        audio = (audio - audio.mean())/audio.std()
+        audio = (audio - audio.mean())/audio.std()/20.0
         # iterate through phonemes in the lyrics
         start = 0
         end = 0
@@ -591,7 +740,7 @@ def prepare_NUS():
         print(fps, train_set[0][i])
         lyric_content = open(train_set[1][i]).readlines()
         # z score normalization
-        audio = (audio - audio.mean())/audio.std()
+        audio = (audio - audio.mean())/audio.std()/20.0
         # iterate through phonemes in the lyrics
         start = 0
         end = 0
@@ -645,7 +794,7 @@ def analyze_NUS():
     segment_lengths_test = []
     total_time_train = 0
     segment_lengths_train = []
-    test_files = os.listdir(test_set_path)
+    # test_files = os.listdir(test_set_path)
     for i in range(0, 249):
         aud = torch.load(os.path.join(test_set_path, "{}.pt".format(i)))
         total_time_test = total_time_test + aud.shape[0]
@@ -661,6 +810,171 @@ def analyze_NUS():
     plt.show()
     sns.displot(segment_lengths_train, bins=50, kde=True)
     plt.show()
+def prepare_timit():
+    with open('location_dict.json') as f:
+        dataset_path_dict = json.load(f)
+    # insert path to your TIMIT corpus here
+    print(dataset_path_dict["dataset_root"])
+    corpus_path = os.path.join(dataset_path_dict["dataset_root"], "Separation_data_sets/timit/data/")
+    corpus = tu.Corpus(corpus_path)
+    # insert save path here
+    save_path = os.path.join(dataset_path_dict["dataset_root"],
+                                                        "lmbmm_vocal_sep_data/TIMIT/")
+    train_path = os.path.join(save_path, "train")
+    test_path = os.path.join(save_path, "test")
+    # obtain corpus object using timit_util
+    timit_training_set = corpus.train
+    timit_test_set = corpus.test
+
+    # gather training dataset
+    counter = 0
+    for idx in range(4320):
+        audio, phonemes, phone_onset, phone_offset, words = get_timit_train_sentence(idx, timit_training_set)
+        phonemes, phone_onset, phone_offset = timit_sentence_to_cmu(phonemes, phone_onset, phone_offset)
+        phonemme_transcript = textgrids.TextGrid()
+        phonemme_transcript.xmin = phone_onset[0]/16000.0
+        phonemme_transcript.xmax = phone_offset[-1]/16000.0
+        phonemme_transcript["phones"] = textgrids.Tier()
+        audio = (audio - audio.mean())/audio.std()/20.0
+        # remove the last space token
+        for i in range(0, len(phonemes)):
+            interval = textgrids.Interval(phonemes[i].upper(), phone_onset[i]/16000.0, phone_offset[i]/16000.0)
+            phonemme_transcript["phones"].append(interval)
+
+        aud_file_save_path = os.path.join(train_path, "{}.pt".format(counter))
+        aud_content = torch.from_numpy(audio)
+        torch.save(aud_content, aud_file_save_path)
+        textgrid_save_path = os.path.join(train_path, "{}.TextGrid".format(counter))
+        phonemme_transcript.write(textgrid_save_path)
+        counter = counter + 1
+    # validation sentences
+    for idx in range(240):
+        print(str(idx) + "\t is done")
+        audio, phonemes, phone_onset, phone_offset, words = get_timit_val_sentence(idx, timit_training_set)
+        phonemes, phone_onset, phone_offset = timit_sentence_to_cmu(phonemes, phone_onset, phone_offset)
+        phonemme_transcript = textgrids.TextGrid()
+        phonemme_transcript.xmin = phone_onset[0] / 16000.0
+        phonemme_transcript.xmax = phone_offset[-1] / 16000.0
+        phonemme_transcript["phones"] = textgrids.Tier()
+        audio = (audio - audio.mean()) / audio.std() / 20.0
+        # remove the last space token
+        for i in range(0, len(phonemes)):
+            # print("here: " + phonemes[i].upper() + "\t{}\t{}".format(phone_onset[i] / 16000.0, phone_offset[i] / 16000.0))
+            interval = textgrids.Interval(phonemes[i].upper(), phone_onset[i] / 16000.0, phone_offset[i] / 16000.0)
+            phonemme_transcript["phones"].append(interval)
+        aud_file_save_path = os.path.join(train_path, "{}.pt".format(counter))
+        aud_content = torch.from_numpy(audio)
+        torch.save(aud_content, aud_file_save_path)
+        textgrid_save_path = os.path.join(train_path, "{}.TextGrid".format(counter))
+        phonemme_transcript.write(textgrid_save_path)
+        counter = counter + 1
+    counter = 0
+    for idx in range(1344):
+        print(str(idx) + "\t is done")
+        audio, phonemes, phone_onset, phone_offset, words = get_timit_test_sentence(idx, timit_test_set)
+        phonemes, phone_onset, phone_offset = timit_sentence_to_cmu(phonemes, phone_onset, phone_offset)
+        phonemme_transcript = textgrids.TextGrid()
+        phonemme_transcript.xmin = phone_onset[0] / 16000.0
+        phonemme_transcript.xmax = phone_offset[-1] / 16000.0
+        phonemme_transcript["phones"] = textgrids.Tier()
+        audio = (audio - audio.mean()) / audio.std() / 20.0
+        # remove the last space token
+        for i in range(0, len(phonemes)):
+            # print("here: " + phonemes[i].upper() + "\t{}\t{}".format(phone_onset[i] / 16000.0, phone_offset[i] / 16000.0))
+            interval = textgrids.Interval(phonemes[i].upper(), phone_onset[i] / 16000.0, phone_offset[i] / 16000.0)
+            phonemme_transcript["phones"].append(interval)
+        aud_file_save_path = os.path.join(test_path, "{}.pt".format(counter))
+        aud_content = torch.from_numpy(audio)
+        torch.save(aud_content, aud_file_save_path)
+        textgrid_save_path = os.path.join(test_path, "{}.TextGrid".format(counter))
+        phonemme_transcript.write(textgrid_save_path)
+        counter = counter + 1
+def analyze_timit():
+    with open('./location_dict.json') as f:
+        dataset_path_dict = json.load(f)
+    test_set_path = os.path.join(dataset_path_dict["dataset_root"], 'lmbmm_vocal_sep_data/TIMIT/test/')
+    train_set_path = os.path.join(dataset_path_dict["dataset_root"], 'lmbmm_vocal_sep_data/TIMIT/train/')
+    total_time_test = 0
+    segment_lengths_test = []
+    total_time_train = 0
+    segment_lengths_train = []
+    test_files = os.listdir(test_set_path)
+    silences = []
+    non_silences = []
+    for i in range(0, 1343):
+        aud = torch.load(os.path.join(test_set_path, "{}.pt".format(i)))
+        grid = textgrids.TextGrid(os.path.join(test_set_path, "{}.TextGrid".format(i)))
+        for i in range(0, len(grid["phones"])):
+            if grid["phones"][i].text != ">":
+                sil_interval = [grid["phones"][i].xmin, grid["phones"][i].xmax]
+                sil_frames = [math.floor(sil_interval[0]*16000), math.floor(sil_interval[1]*16000)]
+                silences.append((aud[sil_frames[0]:sil_frames[1]]**2).mean().detach().numpy().sum())
+            else:
+                sil_interval = [grid["phones"][i].xmin, grid["phones"][i].xmax]
+                sil_frames = [math.floor(sil_interval[0] * 16000), math.floor(sil_interval[1] * 16000)]
+                non_silences.append((aud[sil_frames[0]:sil_frames[1]] ** 2).mean().detach().numpy().sum())
+        total_time_test = total_time_test + aud.shape[0]
+        segment_lengths_test.append(aud.shape[0]/16000.0)
+    for i in range(0, 4559):
+        aud = torch.load(os.path.join(train_set_path, "{}.pt".format(i)))
+        total_time_train = total_time_train + aud.shape[0]
+        segment_lengths_train.append(aud.shape[0]/16000.0)
+        for i in range(0, len(grid["phones"])):
+            if grid["phones"][i].text != ">":
+                sil_interval = [grid["phones"][i].xmin, grid["phones"][i].xmax]
+                sil_frames = [math.floor(sil_interval[0]*16000), math.floor(sil_interval[1]*16000)]
+                silences.append((aud[sil_frames[0]:sil_frames[1]]**2).mean().detach().numpy().sum())
+            else:
+                sil_interval = [grid["phones"][i].xmin, grid["phones"][i].xmax]
+                sil_frames = [math.floor(sil_interval[0] * 16000), math.floor(sil_interval[1] * 16000)]
+                non_silences.append((aud[sil_frames[0]:sil_frames[1]] ** 2).mean().detach().numpy().sum())
+    print(total_time_test/16000.0)
+    print(total_time_train/16000.0)
+    import seaborn as sns
+
+    # sns.displot(test_silences, bins=50, kde=True)
+
+    plt.show()
+    sns.displot(segment_lengths_test, bins=50, kde=True)
+    # plt.show()
+    sns.displot(segment_lengths_train, bins=50, kde=True)
+    plt.show()
+
+def prepare_instrumental():
+    with open('location_dict.json') as f:
+        dataset_path_dict = json.load(f)
+    dataset_path = os.path.join(dataset_path_dict["dataset_root"], 'Separation_data_sets/instrumentals')
+    output_path = os.path.join(dataset_path_dict["dataset_root"], 'lmbmm_vocal_sep_data/INSTRUMENT/data/')
+    # val_output_path = os.path.join(dataset_path_dict["dataset_root"], 'INSTRUMENT/test/')
+    counter = 0
+    output_file_format = os.path.join(output_path, "{}.pt")
+    files = os.listdir(dataset_path)
+    lengthOfSegment = 16000 * 12
+    total_time = 0
+    for file in files:
+        if file[-3:] == "mp3":
+            pass
+        else:
+            continue
+        file_path = os.path.join(dataset_path, file)
+        arr, sr = lb.load(file_path, sr=16000)
+        arr = (arr - arr.mean())/arr.std()/20.0
+        total_time = total_time + arr.shape[0]
+        for i in range(0, int(arr.shape[0]/lengthOfSegment)):
+            min_val = i*lengthOfSegment
+            max_val = min((i+1)*lengthOfSegment, arr.shape[0])
+            if max_val - min_val < lengthOfSegment:
+                continue
+            segment = arr[min_val:max_val]
+            audio_torch = torch.from_numpy(segment).type(torch.float32)
+            audio_torch = audio_torch.repeat(2, 1)
+            audio_path = output_file_format.format(counter)
+            print(audio_path)
+            torch.save(audio_torch, audio_path)
+            counter = counter + 1
+        print("completed " + file +  ", so far we have parsed {} seconds of music.".format(total_time))
+
+
 
 
 

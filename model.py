@@ -1,7 +1,3 @@
-"""
-This file is a modified version of https://github.com/sigsep/open-unmix-pytorch/blob/master/openunmix/model.py
-"""
-
 from torch.nn import LSTM, Linear, BatchNorm1d, Parameter
 import torch
 import torch.nn as nn
@@ -9,207 +5,25 @@ import torch.nn.functional as F
 import numpy as np
 import copy
 
-from . import utils
 
-from .model_utls import _Model
+class _Model(torch.nn.Module):
 
+    """
+    Base class for all models
+    """
+
+    def __init__(self):
+        super(_Model, self).__init__()
+
+    @classmethod
+    def from_config(cls, config: dict):
+        """ All models should have this class method """
+        raise NotImplementedError
 class NoOp(nn.Module):
     def __init__(self):
         super().__init__()
     def forward(self, x):
         return x
-if utils._torchaudio_available():
-    import torchaudio
-
-    class MFCC(nn.Module):
-        def __init__(
-                self,
-                n_fft=4096,
-                n_hop=1024,
-                sample_rate=16000
-        ):
-            super(MFCC, self).__init__()
-
-            self.n_fft = n_fft
-            self.n_hop = n_hop
-
-            self.mfcc = torchaudio.transforms.MFCC(sample_rate, log_mels=True,
-                                                   melkwargs={'n_fft': n_fft, 'hop_length': n_hop})
-
-        def forward(self, x):
-            """
-            Input: (nb_samples, nb_channels, nb_timesteps)
-            Output:(nb_samples, nb_channels, nb_mfcc, nb_frames)
-            """
-
-            nb_samples, nb_channels, nb_timesteps = x.size()
-
-            # merge nb_samples and nb_channels for multichannel stft
-            x = x.reshape(nb_samples*nb_channels, -1)
-
-            # compute stft with parameters as close as possible scipy settings
-            mfcc_f = self.mfcc(x)
-
-            nb_mfcc = mfcc_f.size(1)
-
-            # reshape back to channel dimension
-            mfcc_f = mfcc_f.contiguous().view(
-                nb_samples, nb_channels, nb_mfcc, -1
-            )
-
-            mfcc_f = mfcc_f.permute(3, 0, 1, 2)
-
-            # downmix to mono
-            mfcc_f = torch.mean(mfcc_f, dim=2, keepdim=True)
-
-
-            # shape (nb_frames, nb_samples, nb_channels, nb_mfcc)
-            return mfcc_f
-def smax(tensor, dim, gamma, keepdim=False):
-    exp_gamma = torch.exp(tensor * gamma)
-    sum_over_dim = torch.sum(exp_gamma, dim=dim, keepdim=keepdim)
-    result = torch.log(sum_over_dim) / gamma
-    return result
-class MatrixDiagonalIndexIterator:
-    '''
-    Custom iterator class to return successive diagonal indices of a matrix
-    '''
-
-    def __init__(self, m, n, k_start=0, bandwidth=None):
-        '''
-        __init__(self, m, n, k_start=0, bandwidth=None):
-
-        Arguments:
-            m (int)         : number of rows in matrix
-            n (int)         : number of columns in matrix
-            k_start (int)   : (k_start, k_start) index to begin from
-            bandwidth (int) : bandwidth to constrain indices within
-        '''
-        self.m         = m
-        self.n         = n
-        self.k         = k_start
-        self.k_max     = self.m + self.n - k_start - 1
-        self.bandwidth = bandwidth
-
-    def __iter__(self):
-        return self
-
-    def __next__(self):
-        if hasattr(self, 'i') and hasattr(self, 'j'):
-
-            if self.k == self.k_max:
-                raise StopIteration
-
-            elif self.k < self.m and self.k < self.n:
-                self.i = self.i + [self.k]
-                self.j = [self.k] + self.j
-                self.k+=1
-
-            elif self.k >= self.m and self.k < self.n:
-                self.j.pop(-1)
-                self.j = [self.k] + self.j
-                self.k+=1
-
-            elif self.k < self.m and self.k >= self.n:
-                self.i.pop(0)
-                self.i = self.i + [self.k]
-                self.k+=1
-
-            elif self.k >= self.m and self.k >= self.n:
-                self.i.pop(0)
-                self.j.pop(-1)
-                self.k+=1
-
-        else:
-            self.i = [self.k]
-            self.j = [self.k]
-            self.k+=1
-
-        if self.bandwidth:
-            i_scb, j_scb = sakoe_chiba_band(self.i.copy(), self.j.copy(), self.m, self.n, bandwidth)
-            return i_scb, j_scb
-        else:
-            return self.i.copy(), self.j.copy()
-def sakoe_chiba_band(i_list, j_list, m, n, bandwidth=1):
-    i_scb, j_scb = zip(*[(i, j) for i,j in zip(i_list, j_list)
-                         if abs(2*(i*(n-1) - j*(m-1))) < max(m, n)*(bandwidth+1)])
-    return list(i_scb), list(j_scb)
-def dtw_matrix(scores, mode='faster', idx_to_skip=None):
-    """
-    Computes the accumulated score matrix by the "DTW forward operation"
-    Args:
-        scores: score matrix, shape(batch_size, length_sequence1, length_sequence2)
-        mode:
-        idx: list of indices
-    Returns:
-        dtw_matrix: accumulated scores, shape (batch_size, length_sequence1, length_sequence2)
-
-    """
-    B, N, M = scores.size()
-    device = scores.device
-
-    if mode == 'faster':
-        # there is an issue with pytorch backward computation when using 'faster' with pytorch 1.2.0:
-        # https://github.com/pytorch/pytorch/issues/24853
-        dtw_matrix = torch.ones((B, N+1, M+1), device=device) * -100000
-
-        dtw_matrix[:, 0, 0] = torch.ones((B,), device=device) * 200000
-        # Sweep diagonally through alphas (as done in https://github.com/lyprince/sdtw_pytorch/blob/master/sdtw.py)
-        # See also https://towardsdatascience.com/gpu-optimized-dynamic-programming-8d5ba3d7064f
-        for (m,n),(m_m1,n_m1) in zip(MatrixDiagonalIndexIterator(m = M + 1, n = N + 1, k_start=1),
-                                     MatrixDiagonalIndexIterator(m = M, n= N, k_start=0)):
-
-            d1 = dtw_matrix[:, n_m1, m].unsqueeze(2) # shape(B, number_of_considered_values, 1)
-            d2 = dtw_matrix[:, n_m1, m_m1].unsqueeze(2)
-            max_values, idx = torch.max(torch.cat([d1, d2], dim=2), dim=2)
-            dtw_matrix[:, n, m] = scores[:, n_m1, m_m1] + max_values
-        return dtw_matrix[:, 1:N+1, 1:M+1]
-def optimal_alignment_path(matrix):
-
-    # matrix is torch.tensor with size (1, sequence_length1, sequence_length2)
-
-    # forward step DTW
-    accumulated_scores = dtw_matrix(matrix, mode='faster')
-    accumulated_scores = accumulated_scores.cpu().detach().squeeze(0).numpy()
-
-    N, M = accumulated_scores.shape
-
-    optimal_path_matrix = np.zeros((N, M))
-    optimal_path_matrix[-1, -1] = 1  # last phoneme is active at last time frame
-    # backtracking: go backwards through time steps n and put value of active m to 1 in optimal_path_matrix
-    n = N - 2
-    m = M - 1
-
-
-    while m > 0:
-        d1 = accumulated_scores[n, m]  # score at n of optimal phoneme at n-1
-        d2 = accumulated_scores[n, m - 1]  # score at n of phoneme before optimal phoneme at n-1
-        arg_max = np.argmax([d1, d2])  # = 0 if same phoneme active as before, = 1 if previous phoneme active
-        optimal_path_matrix[n, m - arg_max] = 1
-        n -= 1
-        m -= arg_max
-        if n == -2:
-            print("DTW backward pass failed. n={} but m={}".format(n, m))
-            break
-    optimal_path_matrix[0:n+1, 0] = 1
-    return optimal_path_matrix  # numpy array with shape (N, M)
-def pad_for_stft(signal, hop_length):
-    # this function pads the given signal so that all samples are taken into account by the stft
-    # input and output signal have shape (batch_size, nb_channels, nb_timesteps)
-
-    nb_samples, nb_channels, signal_len = signal.size()
-    incomplete_frame_len = signal_len % hop_length
-
-    device = signal.device
-
-    if incomplete_frame_len == 0:
-        # no padding needed
-        return signal
-    else:
-        pad_length = hop_length - incomplete_frame_len
-        padding = torch.zeros((nb_samples, nb_channels, pad_length)).to(device)
-        padded_signal = torch.cat((signal, padding), dim=2)
-        return padded_signal
 class STFT(nn.Module):
     def __init__(
         self,
@@ -297,6 +111,7 @@ def index2one_hot(index_tensor, vocabulary_size):
     chars_one_hot.scatter_(dim=2, index=index_tensor, value=1)
 
     return chars_one_hot
+
 class OpenUnmix(_Model):
     def __init__(
         self,

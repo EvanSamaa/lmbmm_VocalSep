@@ -129,3 +129,5 @@ dmypy.json
 .pyre/
 plla_tisvs/tensorboard/*
 plla_tisvs/trained_models/*
+tensorboard/*
+trained_models/*

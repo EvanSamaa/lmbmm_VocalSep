@@ -28,8 +28,6 @@ import model_utls
 
 
 tqdm.monitor_interval = 0
-
-
 def train(args, unmix, device, train_sampler, optimizer):
     losses = utils.AverageMeter()
     unmix.train()

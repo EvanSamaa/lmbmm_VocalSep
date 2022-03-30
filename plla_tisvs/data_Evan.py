@@ -56,7 +56,6 @@ class MixSNR(object):
             accompaniment = accompaniment / mix_max
             return mix, vocals, accompaniment
 
-
 class Compose(object):
     """Composes several augmentation transforms.
     Args:
@@ -71,12 +70,10 @@ class Compose(object):
             audio = t(audio)
         return audio
 
-
 def _augment_gain(audio, low=0.25, high=1.25):
     """Applies a random gain between `low` and `high`"""
     g = low + torch.rand(1) * (high - low)
     return audio * g
-
 
 def _augment_channelswap(audio):
     """Swap channels of stereo signals with a probability of p=0.5"""
@@ -84,7 +81,6 @@ def _augment_channelswap(audio):
         return torch.flip(audio, [0])
     else:
         return audio
-
 
 def load_datasets(parser, args):
     """Loads the specified dataset from commandline arguments
@@ -237,7 +233,6 @@ def load_datasets(parser, args):
         valid_dataset.vocabulary_size = valid_data.vocabulary_size
 
     return train_dataset, valid_dataset, args
-
 
 class MUSDBLyricsDataTrain(torch.utils.data.Dataset):
 
@@ -426,7 +421,6 @@ class MUSDBLyricsDataTrain(torch.utils.data.Dataset):
         else:
             return mix, target_source, text_
 
-
 class MUSDBLyricsDataVal(torch.utils.data.Dataset):
 
     def __init__(self,
@@ -550,7 +544,6 @@ class MUSDBLyricsDataVal(torch.utils.data.Dataset):
             return mix, target_source, text_, file[2:]
         else:
             return mix, target_source, text_
-
 
 class MUSDBLyricsDataTest(torch.utils.data.Dataset):
 
@@ -682,7 +675,6 @@ class MUSDBLyricsDataTest(torch.utils.data.Dataset):
 
         return test_track
 
-
 class TIMITMusicTrain(torch.utils.data.Dataset):
 
     def __init__(self,
@@ -776,7 +768,6 @@ class TIMITMusicTrain(torch.utils.data.Dataset):
 
         return mix, speech, text
 
-
 class TIMITMusicVal(torch.utils.data.Dataset):
 
     def __init__(self,
@@ -855,7 +846,6 @@ class TIMITMusicVal(torch.utils.data.Dataset):
                                                music, padding_at_start, speech_len)
 
         return mix, speech, text
-
 
 class TIMITMusicTest(torch.utils.data.Dataset):
 

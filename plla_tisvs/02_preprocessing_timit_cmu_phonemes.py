@@ -62,6 +62,7 @@ def get_timit_test_sentence(idx):
     phonemes = sentence.phones_df.index.values
 
     return audio, words, phonemes
+
 # load timit_word2cmu_phonemes: a dictionary that translates the words of the TIMIT vocabulary to phonemes
 pickle_in = open('dicts/timit_word2cmu_phonemes.pickle', 'rb')
 timit_word2cmu_phonemes = pickle.load(pickle_in)
