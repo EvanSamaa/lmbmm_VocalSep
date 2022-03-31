@@ -940,6 +940,58 @@ def analyze_timit():
     sns.displot(segment_lengths_train, bins=50, kde=True)
     plt.show()
 
+def prepare_NUS_landmarks():
+    with open('./location_dict.json') as f:
+        dataset_path_dict = json.load(f)
+    path_to_dataset = os.path.join(dataset_path_dict["dataset_root"], 'lmbmm_vocal_sep_data/NUS/')
+    # for test set
+    for i in range(0, 270):
+        filePath = os.path.join(path_to_dataset, "test_landmarks_raw/{}_raw.json".format(i))
+        savePath = os.path.join(path_to_dataset, "test_landmarks_raw/{}_processed.pt".format(i))
+        with open(filePath) as f:
+            test_file = json.load(f)
+        keys = list(test_file["landmarks"].keys())
+        keys.sort()
+        N = len(keys)
+        T = len(test_file["landmarks"][keys[0]])
+        landmark_array = np.zeros([T, N, 3])
+        # landmark_array_t = np.zeros([N, 3])
+        for t in range(0, T):
+            for n in range(0, N):
+                landmark_array[t][n] = np.array(test_file["landmarks"][keys[n]][0])
+            landmark_array[t] = landmark_array[t] - landmark_array[t].mean(axis=0, keepdims=True)
+            landmark_array[t] = landmark_array[t]/np.sqrt(np.square(landmark_array[t]).sum(axis=1)).mean()
+                # landmark_array_t[n] = np.array(test_file["landmarks"][keys[n]][0])
+        landmark_array = torch.from_numpy(landmark_array).type(torch.FloatTensor)
+        torch.save(landmark_array, savePath)
+        # plt.scatter(landmark_array_t[:,0], landmark_array_t[:, 1])
+        # plt.show()
+        print(i, "test")
+
+    for i in range(0, 854):
+        filePath = os.path.join(path_to_dataset, "train_landmarks_raw/{}_raw.json".format(i))
+        savePath = os.path.join(path_to_dataset, "train_landmarks_raw/{}_processed.pt".format(i))
+        with open(filePath) as f:
+            test_file = json.load(f)
+        keys = list(test_file["landmarks"].keys())
+        keys.sort()
+        N = len(keys)
+        T = len(test_file["landmarks"][keys[0]])
+        landmark_array = np.zeros([T, N, 3])
+        # landmark_array_t = np.zeros([N, 3])
+        for t in range(0, T):
+            for n in range(0, N):
+                landmark_array[t][n] = np.array(test_file["landmarks"][keys[n]][0])
+                # landmark_array_t[n] = np.array(test_file["landmarks"][keys[n]][0])
+            landmark_array[t] = landmark_array[t] - landmark_array[t].mean(axis=0, keepdims=True)
+            landmark_array[t] = landmark_array[t] / np.sqrt(np.square(landmark_array[t]).sum(axis=1)).mean()
+        landmark_array = torch.from_numpy(landmark_array).type(torch.FloatTensor)
+        torch.save(landmark_array, savePath)
+        # plt.scatter(landmark_array_t[:,0], landmark_array_t[:, 1])
+        # plt.show()
+        print(i, "train")
+
+
 def prepare_instrumental():
     with open('location_dict.json') as f:
         dataset_path_dict = json.load(f)
