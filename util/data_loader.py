@@ -4,6 +4,8 @@ It contains the dataset classes used for training and testing"""
 from .utils import load_audio, load_info
 from pathlib import Path
 import torch.utils.data
+import torch.nn.functional as functional
+# import torch.nn.functional.interpolate as t_interpolate
 from torch.nn.utils.rnn import pad_sequence
 
 import numpy as np
@@ -69,7 +71,6 @@ class Compose(object):
         for t in self.transforms:
             audio = t(audio)
         return audio
-
 def _augment_gain(audio, low=0.25, high=1.25):
     """Applies a random gain between `low` and `high`"""
     g = low + torch.rand(1) * (high - low)
@@ -397,7 +398,8 @@ class NUSMusicTest(torch.utils.data.Dataset):
                  fixed_length=False,
                  space_token_only=False,
                  mono=False,
-                 size=1344):
+                 size=1344,
+                 landmarkNoise:float=0):
 
         super(NUSMusicTest).__init__()
 
@@ -407,6 +409,7 @@ class NUSMusicTest(torch.utils.data.Dataset):
         self.space_token_only = space_token_only
         self.mono = mono
         self.data_set_size = size
+        self.landmarkNoise = landmarkNoise
         self.sample_rate = 16000  # TIMIT is only available at 16 kHz
         with open('location_dict.json') as f:
             self.addr_dict = json.load(f)
@@ -415,19 +418,19 @@ class NUSMusicTest(torch.utils.data.Dataset):
 
         if text_units == 'cmu_phonemes':
             self.path_to_text_sequences = os.path.join(self.addr_dict["dataset_root"],
-                                                       'cmu_phoneme_sequences_idx_open_unmix/train')
+                                                       'cmu_phoneme_sequences_idx_open_unmix/test')
             self.vocabulary_size = 44
         if text_units == 'ones':
             self.path_to_text_sequences = os.path.join(self.addr_dict["dataset_root"],
-                                                       'cmu_phoneme_sequences_idx_open_unmix/train')
+                                                       'cmu_phoneme_sequences_idx_open_unmix/test')
             self.vocabulary_size = 44
         if text_units == 'visemes':
             self.path_to_text_sequences = os.path.join(self.addr_dict["dataset_root"],
-                                                       'viseme_sequences_idx_open_unmix/train')
+                                                       'viseme_sequences_idx_open_unmix/test')
             self.vocabulary_size = 24
         if text_units == "landmarks":
             self.path_to_text_sequences = os.path.join(self.addr_dict["dataset_root"],
-                                                       'viseme_sequences_idx_open_unmix/train')
+                                                       'lmbmm_vocal_sep_data/NUS/test_landmarks_raw')
         if text_units == None:
             self.path_to_text_sequences = None
 
@@ -438,7 +441,7 @@ class NUSMusicTest(torch.utils.data.Dataset):
         self.mix_with_snr = MixSNR()
 
     def __len__(self):
-        return min(248, self.data_set_size)  # number of TIMIT utterances assigned to training set
+        return min(270, self.data_set_size)  # number of TIMIT utterances assigned to training set
 
     def __getitem__(self, idx):
         # get speech file os.path.join(self.addr_dict["dataset_root"], 'TIMIT/TIMIT_torch/train/{}.pt'.format(idx))
@@ -472,7 +475,22 @@ class NUSMusicTest(torch.utils.data.Dataset):
                                    mode='constant', constant_values=0)
             music = music[:, 0:speech_padded.shape[1]]
         if not self.path_to_text_sequences is None:
-            side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}.pt'.format(idx)))
+            if self.text_units == "landmarks":
+                side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))[:, :, 0:2]
+
+                # from matplotlib import pyplot as plt
+                # test = side_info + torch.normal(0, self.landmarkNoise, side_info.shape)
+                # test = test.cpu().detach().numpy()
+                # plt.scatter(test[0, :, 0], test[0, :, 1])
+                # plt.show()
+
+                side_info = side_info - side_info[0]
+                shape = [int(side_info.shape[0]), int(side_info.shape[1] * side_info.shape[2])]
+                side_info = side_info.view(shape[0], shape[1])
+                noise = torch.normal(0, self.landmarkNoise, side_info.shape)
+                side_info = side_info + noise
+            else:
+                side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}.pt'.format(idx)))
             if self.space_token_only:
                 # put space token instead of silence token at start and end of text sequence
                 # this option should not be used for pre-training on speech,

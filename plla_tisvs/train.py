@@ -125,8 +125,6 @@ def get_statistics(args, dataset):
         1e-4*np.max(scaler.scale_)  # np.max = np.amax, it returns the max element of one array
     )
     return scaler.mean_, std
-
-
 def main():
     parser = argparse.ArgumentParser(description='Open Unmix Trainer')
 

@@ -47,7 +47,6 @@ class STFT(nn.Module):
         Output:(nb_samples, nb_channels, nb_bins, nb_frames, 2)
         """
         nb_samples, nb_channels, nb_timesteps = x.size()
-
         # merge nb_samples and nb_channels for multichannel stft
         x = x.reshape(nb_samples*nb_channels, -1)
 
@@ -59,7 +58,6 @@ class STFT(nn.Module):
             normalized=False, onesided=True,
             pad_mode='reflect'
         )
-
         # reshape back to channel dimension
         stft_f = stft_f.contiguous().view(
             nb_samples, nb_channels, self.n_fft // 2 + 1, -1, 2
@@ -230,7 +228,6 @@ class OpenUnmix(_Model):
                    )
 
     def forward(self, x):
-
         # ignore potential side info that has been given as input
         x = x[0]
 
