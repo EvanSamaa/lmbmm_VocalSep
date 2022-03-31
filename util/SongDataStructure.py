@@ -12,7 +12,6 @@ from scipy.signal.windows import gaussian
 from scipy.interpolate import interp1d
 import numpy as np
 
-
 import torch
 from plla_tisvs.preprocessing_input import Custom_data_set
 import plla_tisvs.testx as testx
@@ -47,7 +46,7 @@ VOCAL_RANGES_VAL = [[87.30705785825097, 329.62755691287],
 VOCAL_RANGES_NAME = ['BASS', 'BARITONE', 'TENOR', 'ALTO', 'MEZZO_SOPRANO', 'SOPRANO']
 
 class Minimal_song_data_structure():
-    def __init__(self, audio_path_file, transcript_path, txt_grid_path = "", pitch_ceiling = 1400, alignment_type = "cmu_phonemes"):
+    def __init__(self, audio_path_file, transcript_path, txt_grid_path = "", pitch_ceiling = 1400, alignment_type = "cmu_phonemes", use_torch=False, sr=16000):
         # the audio file should be 44.1kHz for accurate pitch prediction result.
         # the audio file could be a mp3 file
         self.transcript_path = transcript_path
@@ -58,7 +57,15 @@ class Minimal_song_data_structure():
         self.dt = 0.01
         self.silence_threshold = 0.007
         # obtain sound related data using Praat
-        self.snd = parselmouth.Sound(audio_path_file)
+        if use_torch:
+            # here we assume that if we take in torch data, the sampling frequency will be 16000, but this could be
+            # be changed if needed
+            temp_snd_arr = torch.load(audio_path_file).detach().numpy()
+            # print(temp_snd_arr.shape[0]/16000.0)
+            temp_snd_arr = librosa.resample(temp_snd_arr, orig_sr=16000, target_sr=44100)
+            self.snd = parselmouth.Sound(temp_snd_arr, sampling_frequency=44100, start_time=0)
+        else:
+            self.snd = parselmouth.Sound(audio_path_file)
         self.sound_arr = self.snd.as_array()[0]
         # self.sound_arr = librosa.load(audio_path_file, sr = 44100)[0]
         self.sound_arr_interp = interp1d(self.snd.xs(), self.sound_arr)
@@ -67,9 +74,10 @@ class Minimal_song_data_structure():
 
         self.pitch = self.snd.to_pitch(time_step = self.dt, pitch_ceiling = self.pitch_ceiling)
         self.pitch_arr = self.pitch.selected_array["frequency"]
-        self.pitch_arr[self.pitch_arr == 0] = np.nan
-        mask = np.isnan(self.pitch_arr)
-        self.pitch_arr[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), self.pitch_arr[~mask])
+        if np.square(self.pitch_arr).sum() != 0:
+            self.pitch_arr[self.pitch_arr == 0] = np.nan
+            mask = np.isnan(self.pitch_arr)
+            self.pitch_arr[mask] = np.interp(np.flatnonzero(mask), np.flatnonzero(~mask), self.pitch_arr[~mask])
         # use interpolation to deal with missing value in the pitch prediction
         self.pitch_interp = interp1d(self.pitch.xs(), self.pitch_arr)
         self.intensity = self.snd.to_intensity(time_step=self.dt)
@@ -645,10 +653,13 @@ class Minimal_song_data_structure():
         word_intervals = []
         for i in range(0, len(grid["phones"])):
             phoneme_list.append(grid["phones"][i].text)
-            phoneme_intervals.append([grid["phones"][i].xmin, grid["phones"][i].xmax])
-        for i in range(0, len(grid["words"])):
-            word_list.append(grid["words"][i].text)
-            word_intervals.append([grid["words"][i].xmin, grid["words"][i].xmax])
+            phoneme_intervals.append([grid["phones"][i].xmin - grid.xmin, grid["phones"][i].xmax - grid.xmin])
+        try:
+            for i in range(0, len(grid["words"])):
+                word_list.append(grid["words"][i].text)
+                word_intervals.append([grid["words"][i].xmin - grid.xmin, grid["words"][i].xmax - grid.xmin])
+        except:
+            pass
         return phoneme_list, phoneme_intervals, word_list, word_intervals
     def write_textgrid(self, output_path, file_name):
         new_grid = textgrids.TextGrid()  # initialize new_textgrid object
@@ -775,7 +786,7 @@ class CMU_phonemes_dicts():
                   'UW', 'V', 'W', 'Y', 'Z', 'ZH'])
         self.vowels = set(['AA', 'AE', 'AH', 'AO', 'AW', 'AY', 'EH', 'ER', 'EY',
                   'IH', 'IY', 'OW', 'OY', 'UH', 'UW', ])
-        self.voiced = set(['M', 'N']).union(self.vowels)
+        self.voiced = set(['M', 'N', "L", "NG"]).union(self.vowels)
         self.consonants = set(['B', 'CH', 'D', 'DH', 'F', 'G', 'HH', 'JH', 'K', 'L', 'M', 'N', 'NG',
                               'P', 'R', 'S', 'SH', 'T', 'TH', 'V', 'W', 'Y', 'Z', 'ZH'])
         self.consonants_no_jaw = self.consonants
@@ -791,7 +802,7 @@ class JALI_visemes_dicts():
         self.vowels = set(['Ih_pointer', 'Ee_pointer', 'Eh_pointer', 'Aa_pointer', 'U_pointer', 'Uh_pointer'
                            , 'Oo_pointer', 'Oh_pointer', 'Schwa_pointer', 'Eu_pointer', "Ah_pointer"])
         self.voiced = set(['Ih_pointer', 'Ee_pointer', 'Eh_pointer', 'Aa_pointer', 'U_pointer', 'Uh_pointer'
-                           , 'Oo_pointer', 'Oh_pointer', 'Schwa_pointer', 'Eu_pointer', "Ah_pointer", "LNTD_pointer", "LNTDa_pointer"])
+                           , 'Oo_pointer', 'Oh_pointer', 'Schwa_pointer', 'Eu_pointer', "Ah_pointer", "LNTD_pointer"])
         self.consonants_no_jaw = set(["Ya_pointer", "Ja_pointer", "Ra_pointer", "FVa_pointer", "LNTDa_pointer", "Ma_pointer", "BPa_pointer", "Wa_pointer", "Tha_pointer", "GKa_pointer"])
         self.consonants = set(["M_pointer", "BP_pointer", "JY_pointer", "Th_pointer", "ShChZh_pointer", "SZ_pointer", "GK_pointer", "LNTD_pointer", "R_pointer", "W_pointer", "FV_pointer"])
         self.lip_closer = set(["M_pointer", "BP_pointer", "FV_pointer", "SZ_pointer"])

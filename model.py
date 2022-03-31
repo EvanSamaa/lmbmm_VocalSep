@@ -111,7 +111,6 @@ def index2one_hot(index_tensor, vocabulary_size):
     chars_one_hot.scatter_(dim=2, index=index_tensor, value=1)
 
     return chars_one_hot
-
 class OpenUnmix(_Model):
     def __init__(
         self,

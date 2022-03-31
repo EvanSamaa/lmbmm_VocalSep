@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 from scipy.interpolate import interp1d
 import soundfile as sf
 import textgrids
+from matplotlib import pyplot as plt
 import parselmouth
 import timit_utils as tu
 
@@ -680,12 +681,12 @@ def prepare_NUS():
         os.mkdir(train_set_location)
     except OSError:
         print("Directory already exist")
+
     # going through test set
     counter = 0
     # iterate through the audio files
     for i in range(0, len(test_set[0])):
         audio, fps = lb.load(test_set[0][i], sr=16000)
-        print(fps, test_set[0][i])
         lyric_content = open(test_set[1][i]).readlines()
         # z score normalization
         audio = (audio - audio.mean())/audio.std()/20.0
@@ -722,19 +723,22 @@ def prepare_NUS():
                     ############### save audio and textgrid ###############
                     aud_file_save_path = os.path.join(test_set_location, "{}.pt".format(counter))
                     # aud_file_save_path = os.path.join(test_set_location, "{}.wav".format(counter))
+                    # print(counter, end - start, audio[math.floor(start*fps):math.floor(end*fps)].shape[0]/fps, phoneme_timings[-1][1] - phoneme_timings[0][0])
                     aud_content = torch.from_numpy(audio[math.floor(start*fps):math.floor(end*fps)])
                     torch.save(aud_content, aud_file_save_path)
                     textgrid_save_path = os.path.join(test_set_location, "{}.TextGrid".format(counter))
                     phonemme_transcript.write(textgrid_save_path)
                     ############### manage tracking data
                     phoneme_timings = [[float(t_start), float(t_end), phone]]
-                    start = float(t_end)
+                    start = float(t_start)
                     counter = counter + 1
             else:
                 if phone != "sp":
                     phoneme_timings.append([float(t_start), float(t_end), phone])
                 end = float(t_end)
     counter = 0
+    start = 0
+    end = 0
     for i in range(0, len(train_set[0])):
         audio, fps = lb.load(train_set[0][i], sr=16000)
         print(fps, train_set[0][i])
@@ -779,7 +783,7 @@ def prepare_NUS():
                     phonemme_transcript.write(textgrid_save_path)
                     ############### manage tracking data
                     phoneme_timings = [[float(t_start), float(t_end), phone]]
-                    start = float(t_end)
+                    start = float(t_start)
                     counter = counter + 1
             else:
                 if phone != "sp":
@@ -973,7 +977,41 @@ def prepare_instrumental():
             torch.save(audio_torch, audio_path)
             counter = counter + 1
         print("completed " + file +  ", so far we have parsed {} seconds of music.".format(total_time))
+def prep_raw_landmarks():
+    # this can only be done after the keypoint data are extracted from maya
+    with open('./location_dict.json') as f:
+        dataset_path_dict = json.load(f)
+    path_to_test = os.path.join(dataset_path_dict["dataset_root"], 'lmbmm_vocal_sep_data/NUS/test_landmarks/{}_raw.json')
+    with open(path_to_test.format(0)) as f:
+        lm = json.load(f)
+    lm_indexes = sorted(list(lm["landmarks"].keys()), key=lambda x: int(x))
+    # since we will be storing the landmarks in an array, we need to convert the landmark indices to array indices
+    # we therefore construct two dictionaries to keep track of the conversion
+    index_to_landmark = {}
+    landmark_to_index = {}
+    for i in range(0, len(lm_indexes)):
+        landmark_to_index[lm_indexes[i]] = i
+        index_to_landmark[i] = lm_indexes[i]
 
+    # this visualizes it
+    for i in range(0, 4):
+        # for each file load the json file
+        lm_dict = {}
+        with open(path_to_test.format(i)) as f:
+            lm_dict = json.load(f)
+        t = 0
+        # plot the subsequent points
+        fig = plt.figure()
+        ax = fig.add_subplot(projection='3d')
+        for lm in lm_indexes:
+            ax.scatter(lm_dict["landmarks"][lm][t][0], lm_dict["landmarks"][lm][t][1], lm_dict["landmarks"][lm][t][2])
+
+            ax.set_xlabel('X Label')
+            ax.set_ylabel('Y Label')
+            ax.set_zlabel('Z Label')
+
+        plt.show()
+        A[2]
 
 
 
