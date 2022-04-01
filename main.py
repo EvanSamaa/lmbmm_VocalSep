@@ -23,9 +23,9 @@ if __name__ == "__main__":
     #                                "E:/MASC/lmbmm_vocal_sep_data/NUS/train_landmarks/{}.json".format(i))
     #     ja.generate_curves()
     #     print("{}.pt is completed".format(i))
-    du.prep_raw_landmarks()
-
-    # du.prepare_NUS_landmarks()
-    # A[2]
+    du.prepare_NUS_landmarks()
+    A[2]
     data = NUSMusicTest("landmarks", mono=True, fixed_length=True, landmarkNoise=0.02)
     mix, groundTruth, sideinfo = data.__getitem__(0)
+    print(sideinfo.shape)
+

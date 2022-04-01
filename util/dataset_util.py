@@ -956,20 +956,25 @@ def prepare_NUS_landmarks():
             test_file = json.load(f)
         keys = list(test_file["landmarks"].keys())
         keys.sort()
+
+
         N = len(keys)
         T = len(test_file["landmarks"][keys[0]])
         landmark_array = np.zeros([T, N, 3])
         # landmark_array_t = np.zeros([N, 3])
-        for t in range(0, T):
+        for tt in range(0, T):
             for n in range(0, N):
-                landmark_array[t][n] = np.array(test_file["landmarks"][keys[n]][0])
-            landmark_array[t] = landmark_array[t] - landmark_array[t].mean(axis=0, keepdims=True)
-            landmark_array[t] = landmark_array[t]/np.sqrt(np.square(landmark_array[t]).sum(axis=1)).mean()
-                # landmark_array_t[n] = np.array(test_file["landmarks"][keys[n]][0])
+                landmark_array[tt][n] = np.array(test_file["landmarks"][keys[n]][tt])
+                # landmark_array_t[n] = np.array(test_file["landmarks"][keys[n]][tt])
+            landmark_array[tt] = landmark_array[tt] - landmark_array[tt].mean(axis=0, keepdims=True)
+            landmark_array[tt] = landmark_array[tt]/np.sqrt(np.square(landmark_array[tt]).sum(axis=1)).mean()
+
+            # plt.scatter(landmark_array_t[:, 0], landmark_array_t[:, 1])
+            # if tt == T-1:
+            #     plt.show()
         landmark_array = torch.from_numpy(landmark_array).type(torch.FloatTensor)
         torch.save(landmark_array, savePath)
-        # plt.scatter(landmark_array_t[:,0], landmark_array_t[:, 1])
-        # plt.show()
+
         print(i, "test")
 
     for i in range(0, 854):
@@ -979,16 +984,17 @@ def prepare_NUS_landmarks():
             test_file = json.load(f)
         keys = list(test_file["landmarks"].keys())
         keys.sort()
+        minn = np.ceil(test_file["t_min"]) * 24
+        maxx = np.ceil(test_file["t_max"]) * 24
         N = len(keys)
         T = len(test_file["landmarks"][keys[0]])
         landmark_array = np.zeros([T, N, 3])
         # landmark_array_t = np.zeros([N, 3])
-        for t in range(0, T):
+        for tt in range(0, T):
             for n in range(0, N):
-                landmark_array[t][n] = np.array(test_file["landmarks"][keys[n]][0])
-                # landmark_array_t[n] = np.array(test_file["landmarks"][keys[n]][0])
-            landmark_array[t] = landmark_array[t] - landmark_array[t].mean(axis=0, keepdims=True)
-            landmark_array[t] = landmark_array[t] / np.sqrt(np.square(landmark_array[t]).sum(axis=1)).mean()
+                landmark_array[tt][n] = np.array(test_file["landmarks"][keys[n]][tt])
+            landmark_array[tt] = landmark_array[tt] - landmark_array[tt].mean(axis=0, keepdims=True)
+            landmark_array[tt] = landmark_array[tt]/np.sqrt(np.square(landmark_array[tt]).sum(axis=1)).mean()
         landmark_array = torch.from_numpy(landmark_array).type(torch.FloatTensor)
         torch.save(landmark_array, savePath)
         # plt.scatter(landmark_array_t[:,0], landmark_array_t[:, 1])
@@ -1036,6 +1042,8 @@ def prep_raw_landmarks():
     path_to_test = os.path.join(dataset_path_dict["dataset_root"], 'lmbmm_vocal_sep_data/NUS/test_landmarks/{}_raw.json')
     with open(path_to_test.format(0)) as f:
         lm = json.load(f)
+    minn = np.floor(lm["t_min"])*24
+    maxx = np.ceil(lm["t_max"])*24
     lm_indexes = sorted(list(lm["landmarks"].keys()), key=lambda x: int(x))
     # since we will be storing the landmarks in an array, we need to convert the landmark indices to array indices
     # we therefore construct two dictionaries to keep track of the conversion
