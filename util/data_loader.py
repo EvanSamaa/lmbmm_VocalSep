@@ -326,7 +326,7 @@ class NUSMusicTrain(torch.utils.data.Dataset):
             self.vocabulary_size = 24
         if text_units == "landmarks":
             self.path_to_text_sequences = os.path.join(self.addr_dict["dataset_root"],
-                                                       'lmbmm_vocal_sep_data/NUS/train_landmarks_raw')
+                                                       'lmbmm_vocal_sep_data/NUS/train_landmarks_raw/')
         if text_units == None:
             self.path_to_text_sequences = None
 
@@ -342,6 +342,8 @@ class NUSMusicTrain(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         # get speech file os.path.join(self.addr_dict["dataset_root"], 'TIMIT/TIMIT_torch/train/{}.pt'.format(idx))
         speech = torch.load(os.path.join(self.data_set_root, '{}.pt'.format(idx)))
+        print(os.path.join(self.data_set_root, '{}.pt'.format(idx)))
+        print(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))
         if self.mono:
             speech = speech.unsqueeze(0)
             speech = speech.tile((2,1))
