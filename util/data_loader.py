@@ -340,8 +340,6 @@ class NUSMusicTrain(torch.utils.data.Dataset):
         return 853  # number of NUS utterances assigned to training set
 
     def __getitem__(self, idx):
-        if idx == 78:
-            idx = 79
         # get speech file os.path.join(self.addr_dict["dataset_root"], 'TIMIT/TIMIT_torch/train/{}.pt'.format(idx))
         speech = torch.load(os.path.join(self.data_set_root, '{}.pt'.format(idx)))
         # print(os.path.join(self.data_set_root, '{}.pt'.format(idx)))

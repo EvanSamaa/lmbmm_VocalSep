@@ -6,12 +6,12 @@ import util.jali_curve_generation as jg
 import torch
 from util.data_loader import NUSMusicTest
 if __name__ == "__main__":
-    du.prepare_NUS()
+    # du.prepare_NUS()
     # du.analyze_timit()
     # du.prepare_timit()
     # du.prepare_NUS()
     # du.analyze_NUS()
-    # du.prepare_instrumental()
+    du.prepare_instrumental()
 
     # data_set_root = "F:/MASC/lmbmm_vocal_sep_data/NUS/train"
     # path_to_text_sequences = "F:/MASC/lmbmm_vocal_sep_data/NUS/train_landmarks_raw"
