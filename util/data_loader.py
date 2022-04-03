@@ -362,7 +362,7 @@ class NUSMusicTrain(torch.utils.data.Dataset):
             # print(music_len, speech_len, padding_at_start, padding_at_end)
             speech_padded = np.pad(array=speech.numpy(), pad_width=((0, 0), (padding_at_start, padding_at_end)),
                                    mode='constant', constant_values=0)
-            print(music_len, music_idx)
+            print(music_len, music_idx, speech_len, idx)
         else:
             speech_len = speech.size()[1]
             music_len = music.size()[1]
