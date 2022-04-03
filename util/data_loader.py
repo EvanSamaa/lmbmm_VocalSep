@@ -310,7 +310,7 @@ class NUSMusicTrain(torch.utils.data.Dataset):
         with open('location_dict.json') as f:
             self.addr_dict = json.load(f)
 
-        self.data_set_root = os.path.join(self.addr_dict["dataset_root"], 'lmbmm_vocal_sep_data/TIMIT/train/')
+        self.data_set_root = os.path.join(self.addr_dict["dataset_root"], 'lmbmm_vocal_sep_data/NUS/train/')
 
         if text_units == 'cmu_phonemes':
             self.path_to_text_sequences = os.path.join(self.addr_dict["dataset_root"],
@@ -337,12 +337,10 @@ class NUSMusicTrain(torch.utils.data.Dataset):
         self.mix_with_snr = MixSNR()
 
     def __len__(self):
-        return 738  # number of TIMIT utterances assigned to training set
+        return 853  # number of NUS utterances assigned to training set
 
     def __getitem__(self, idx):
         # get speech file os.path.join(self.addr_dict["dataset_root"], 'TIMIT/TIMIT_torch/train/{}.pt'.format(idx))
-
-
         speech = torch.load(os.path.join(self.data_set_root, '{}.pt'.format(idx)))
         if self.mono:
             speech = speech.unsqueeze(0)
@@ -357,9 +355,9 @@ class NUSMusicTrain(torch.utils.data.Dataset):
             speech_len = speech.size()[1]
             music_len = music.size()[1]
             padding_at_start = int(
-                (torch.randint(0, int(np.floor((music_len - speech_len) / 666.66)), size=(1,))) * 666)
-            print(music_len, speech_len)
+                (torch.randint(0, int(np.floor((music_len - speech_len) / 16000 * 24)), size=(1,))) /24*16000)
             padding_at_end = music_len - padding_at_start - speech_len
+            # print(music_len, speech_len, padding_at_start, padding_at_end)
             speech_padded = np.pad(array=speech.numpy(), pad_width=((0, 0), (padding_at_start, padding_at_end)),
                                    mode='constant', constant_values=0)
 
@@ -375,13 +373,11 @@ class NUSMusicTrain(torch.utils.data.Dataset):
         if not self.path_to_text_sequences is None:
             if self.text_units == "landmarks":
                 side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))[:, :, 0:2]
-
                 # from matplotlib import pyplot as plt
                 # test = side_info + torch.normal(0, self.landmarkNoise, side_info.shape)
                 # test = test.cpu().detach().numpy()
                 # plt.scatter(test[0, :, 0], test[0, :, 1])
                 # plt.show()
-
                 side_info = side_info - side_info[0]
                 shape = [int(side_info.shape[0]), int(side_info.shape[1] * side_info.shape[2])]
                 side_info = side_info.view(shape[0], shape[1])
@@ -390,11 +386,11 @@ class NUSMusicTrain(torch.utils.data.Dataset):
                 if self.fixed_length:
                     lm_padding_at_start = int(np.floor(padding_at_start/666.67))
                     lm_padding_at_end = int(music_len/16000)*24 - lm_padding_at_start - shape[0]
-                    print(lm_padding_at_start, shape[0], lm_padding_at_end)
+                    # print(int(music_len/16000)*24, shape[0], lm_padding_at_start, lm_padding_at_end)
                     side_info_padded = np.pad(array=side_info.numpy(), pad_width=((lm_padding_at_start, lm_padding_at_end), (0, 0)),
                                            mode='constant', constant_values=0)
                     side_info = torch.from_numpy(side_info_padded).type(torch.float32)
-                    print(side_info_padded.shape)
+
             else:
                 side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}.pt'.format(idx)))
             if self.space_token_only:
@@ -440,7 +436,7 @@ class NUSMusicTest(torch.utils.data.Dataset):
         with open('location_dict.json') as f:
             self.addr_dict = json.load(f)
 
-        self.data_set_root = os.path.join(self.addr_dict["dataset_root"], 'lmbmm_vocal_sep_data/TIMIT/test/')
+        self.data_set_root = os.path.join(self.addr_dict["dataset_root"], 'lmbmm_vocal_sep_data/NUS/test/')
 
         if text_units == 'cmu_phonemes':
             self.path_to_text_sequences = os.path.join(self.addr_dict["dataset_root"],
@@ -467,12 +463,10 @@ class NUSMusicTest(torch.utils.data.Dataset):
         self.mix_with_snr = MixSNR()
 
     def __len__(self):
-        return min(270, self.data_set_size)  # number of TIMIT utterances assigned to training set
+        return min(270, self.data_set_size)  # number of NUS utterances assigned to training set
 
     def __getitem__(self, idx):
         # get speech file os.path.join(self.addr_dict["dataset_root"], 'TIMIT/TIMIT_torch/train/{}.pt'.format(idx))
-
-
         speech = torch.load(os.path.join(self.data_set_root, '{}.pt'.format(idx)))
         if self.mono:
             speech = speech.unsqueeze(0)
@@ -487,8 +481,10 @@ class NUSMusicTest(torch.utils.data.Dataset):
             # pad the speech signal to same length as music
             speech_len = speech.size()[1]
             music_len = music.size()[1]
-            padding_at_start = int((torch.randint(0, int(np.floor((music_len - speech_len)/666.66)), size=(1,)))*666)
+            padding_at_start = int(
+                (torch.randint(0, int(np.floor((music_len - speech_len) / 16000 * 24)), size=(1,))) / 24 * 16000)
             padding_at_end = music_len - padding_at_start - speech_len
+            # print(music_len, speech_len, padding_at_start, padding_at_end)
             speech_padded = np.pad(array=speech.numpy(), pad_width=((0, 0), (padding_at_start, padding_at_end)),
                                    mode='constant', constant_values=0)
 
@@ -503,26 +499,27 @@ class NUSMusicTest(torch.utils.data.Dataset):
             music = music[:, 0:speech_padded.shape[1]]
         if not self.path_to_text_sequences is None:
             if self.text_units == "landmarks":
-                side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))[:, :, 0:2]
-
+                side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))[:, :,
+                            0:2]
                 # from matplotlib import pyplot as plt
                 # test = side_info + torch.normal(0, self.landmarkNoise, side_info.shape)
                 # test = test.cpu().detach().numpy()
                 # plt.scatter(test[0, :, 0], test[0, :, 1])
                 # plt.show()
-
                 side_info = side_info - side_info[0]
                 shape = [int(side_info.shape[0]), int(side_info.shape[1] * side_info.shape[2])]
                 side_info = side_info.view(shape[0], shape[1])
                 noise = torch.normal(0, self.landmarkNoise, side_info.shape)
                 side_info = side_info + noise
                 if self.fixed_length:
-                    lm_padding_at_start = int(np.floor(padding_at_start/666.67))
-                    lm_padding_at_end = int(music_len/16000)*24 - lm_padding_at_start - shape[0]
-                    print(lm_padding_at_start, lm_padding_at_end)
-                    side_info_padded = np.pad(array=side_info.numpy(), pad_width=((lm_padding_at_start, lm_padding_at_end), (0, 0)),
-                                           mode='constant', constant_values=0)
+                    lm_padding_at_start = int(np.floor(padding_at_start / 666.67))
+                    lm_padding_at_end = int(music_len / 16000) * 24 - lm_padding_at_start - shape[0]
+                    print(int(music_len / 16000) * 24, shape[0], lm_padding_at_start, lm_padding_at_end)
+                    side_info_padded = np.pad(array=side_info.numpy(),
+                                              pad_width=((lm_padding_at_start, lm_padding_at_end), (0, 0)),
+                                              mode='constant', constant_values=0)
                     side_info = torch.from_numpy(side_info_padded).type(torch.float32)
+
             else:
                 side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}.pt'.format(idx)))
             if self.space_token_only:

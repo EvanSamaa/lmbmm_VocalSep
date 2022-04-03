@@ -12,6 +12,17 @@ if __name__ == "__main__":
     # du.analyze_NUS()
     # du.prepare_instrumental()
 
+    # data_set_root = "F:/MASC/lmbmm_vocal_sep_data/NUS/train"
+    # path_to_text_sequences = "F:/MASC/lmbmm_vocal_sep_data/NUS/train_landmarks_raw"
+    # from matplotlib import pyplot as plt
+    # import numpy as np
+    # arr = []
+    # for i in range(0, 854):
+    #     audio = torch.load(os.path.join(data_set_root, '{}.pt'.format(i)))
+    #     landmarks = torch.load(os.path.join(path_to_text_sequences, '{}_processed.pt'.format(i)))[:, :, 0:2]
+    #     arr.append(abs(audio.shape[0]/16000-landmarks.shape[0]/24))
+    # plt.plot(np.array(arr))
+    # plt.show()
     # i = 0
     # for i in range(170, 270):
     #     ja = jg.JaliVoCa_animation("E:/MASC/lmbmm_vocal_sep_data/NUS/test/{}.pt".format(i), "E:/MASC/lmbmm_vocal_sep_data/NUS/test/{}.TextGrid".format(i),
@@ -24,8 +35,8 @@ if __name__ == "__main__":
     #     ja.generate_curves()
     #     print("{}.pt is completed".format(i))
     du.prepare_NUS_landmarks()
-    A[2]
-    data = NUSMusicTest("landmarks", mono=True, fixed_length=True, landmarkNoise=0.02)
-    mix, groundTruth, sideinfo = data.__getitem__(0)
-    print(sideinfo.shape)
+
+    # data = NUSMusicTest("landmarks", mono=True, fixed_length=True, landmarkNoise=0.02)
+    # mix, groundTruth, sideinfo = data.__getitem__(0)
+    # print(sideinfo.shape)
 

@@ -962,9 +962,7 @@ class LandmarkInformedOpenUnmix3(_Model):
         x = x.reshape(nb_frames, nb_samples, self.hidden_size)
         # squash range ot [-1, 1]
         x = torch.tanh(x)
-
         x, _ = self.audio_encoder_lstm(x)
-
         # -------------------------------------------------------------------------------------------------------------
         # attention
         # batch_size = h.size(0)
@@ -998,14 +996,12 @@ class LandmarkInformedOpenUnmix3(_Model):
 
         # -------------------------------------------------------------------------------------------------------------
         # connection of audio and text
-        print(landmarks.shape)
+        # landmarks = [Batch, T, L*2]
         landmarks = landmarks.permute((0, 2, 1))
-        landmarks = F.interpolate(landmarks, x.shape[1])
-        landmarks = landmarks.permute((0, 2, 1))
-        print(landmarks.shape)
-        context = self.lstm_lm(landmarks)
-        print(context.shape)
-        A[2]
+        # landmarks = [Batch, L*2, new_T]
+        landmarks = F.interpolate(landmarks, x.shape[0])
+        landmarks = landmarks.permute((2, 0, 1))
+        context = self.lstm_lm(landmarks)[0]
         concat = torch.cat((context, x), dim=2)
         x = self.fc_c(concat)
         x = self.bn_c(x.transpose(1, 2))  # (nb_samples, hidden_size, nb_frames)
