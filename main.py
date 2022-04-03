@@ -1,12 +1,12 @@
 import os
-# import util.dataset_util as du
+import util.dataset_util as du
 from util.dataset_util import prepare_NUS_landmarks
 import training as tr
 import util.jali_curve_generation as jg
 import torch
 from util.data_loader import NUSMusicTest
 if __name__ == "__main__":
-    # du.prepare_NUS()
+    du.prepare_NUS()
     # du.analyze_timit()
     # du.prepare_timit()
     # du.prepare_NUS()
@@ -35,8 +35,7 @@ if __name__ == "__main__":
     #                                "E:/MASC/lmbmm_vocal_sep_data/NUS/train_landmarks/{}.json".format(i))
     #     ja.generate_curves()
     #     print("{}.pt is completed".format(i))
-    prepare_NUS_landmarks()
-
+    # prepare_NUS_landmarks()
     # data = NUSMusicTest("landmarks", mono=True, fixed_length=True, landmarkNoise=0.02)
     # mix, groundTruth, sideinfo = data.__getitem__(0)
     # print(sideinfo.shape)

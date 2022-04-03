@@ -1,5 +1,5 @@
 {
-  "dataset_root":"/scratch/local/2021/Evan/",
+  "dataset_medusa":"/scratch/local/2021/Evan/",
   "dataset_mac":"/Volumes/EVAN_DISK/MASC/",
-  "dataset_PC":"F:/MASC/"
+  "dataset_root":"F:/MASC/"
 }
