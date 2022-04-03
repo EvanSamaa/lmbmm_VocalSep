@@ -956,8 +956,6 @@ def prepare_NUS_landmarks():
             test_file = json.load(f)
         keys = list(test_file["landmarks"].keys())
         keys.sort()
-
-
         N = len(keys)
         T = len(test_file["landmarks"][keys[0]])
         landmark_array = np.zeros([T, N, 3])
@@ -1005,13 +1003,13 @@ def prepare_NUS_landmarks():
 def prepare_instrumental():
     with open('location_dict.json') as f:
         dataset_path_dict = json.load(f)
-    dataset_path = os.path.join(dataset_path_dict["dataset_root"], 'Separation_data_sets/instrumentals')
+    dataset_path = os.path.join(dataset_path_dict["dataset_root"], 'instrumentals')
     output_path = os.path.join(dataset_path_dict["dataset_root"], 'lmbmm_vocal_sep_data/INSTRUMENT/data/')
     # val_output_path = os.path.join(dataset_path_dict["dataset_root"], 'INSTRUMENT/test/')
     counter = 0
     output_file_format = os.path.join(output_path, "{}.pt")
     files = os.listdir(dataset_path)
-    lengthOfSegment = 16000 * 12
+    lengthOfSegment = 16000 * 15
     total_time = 0
     for file in files:
         if file[-3:] == "mp3":
