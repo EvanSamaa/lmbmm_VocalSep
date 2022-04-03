@@ -484,7 +484,7 @@ class NUSMusicTest(torch.utils.data.Dataset):
             padding_at_start = int(
                 (torch.randint(0, int(np.floor((music_len - speech_len) / 16000 * 24)), size=(1,))) / 24 * 16000)
             padding_at_end = music_len - padding_at_start - speech_len
-            # print(music_len, speech_len, padding_at_start, padding_at_end)
+            print(music_len, speech_len, padding_at_start, padding_at_end)
             speech_padded = np.pad(array=speech.numpy(), pad_width=((0, 0), (padding_at_start, padding_at_end)),
                                    mode='constant', constant_values=0)
 
