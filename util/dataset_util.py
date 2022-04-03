@@ -956,8 +956,6 @@ def prepare_NUS_landmarks():
             test_file = json.load(f)
         keys = list(test_file["landmarks"].keys())
         keys.sort()
-
-
         N = len(keys)
         T = len(test_file["landmarks"][keys[0]])
         landmark_array = np.zeros([T, N, 3])

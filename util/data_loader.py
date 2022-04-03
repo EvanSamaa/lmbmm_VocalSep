@@ -342,8 +342,8 @@ class NUSMusicTrain(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         # get speech file os.path.join(self.addr_dict["dataset_root"], 'TIMIT/TIMIT_torch/train/{}.pt'.format(idx))
         speech = torch.load(os.path.join(self.data_set_root, '{}.pt'.format(idx)))
-        print(os.path.join(self.data_set_root, '{}.pt'.format(idx)))
-        print(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))
+        # print(os.path.join(self.data_set_root, '{}.pt'.format(idx)))
+        # print(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))
         if self.mono:
             speech = speech.unsqueeze(0)
             speech = speech.tile((2,1))
@@ -359,7 +359,7 @@ class NUSMusicTrain(torch.utils.data.Dataset):
             padding_at_start = int(
                 (torch.randint(0, int(np.floor((music_len - speech_len) / 16000 * 24)), size=(1,))) /24*16000)
             padding_at_end = music_len - padding_at_start - speech_len
-            print(music_len, speech_len, padding_at_start, padding_at_end)
+            # print(music_len, speech_len, padding_at_start, padding_at_end)
             speech_padded = np.pad(array=speech.numpy(), pad_width=((0, 0), (padding_at_start, padding_at_end)),
                                    mode='constant', constant_values=0)
 
@@ -388,7 +388,7 @@ class NUSMusicTrain(torch.utils.data.Dataset):
                 if self.fixed_length:
                     lm_padding_at_start = int(np.floor(padding_at_start/666.67))
                     lm_padding_at_end = int(music_len/16000)*24 - lm_padding_at_start - shape[0]
-                    print(int(music_len/16000)*24, shape[0], lm_padding_at_start, lm_padding_at_end)
+                    # print(int(music_len/16000)*24, shape[0], lm_padding_at_start, lm_padding_at_end)
                     side_info_padded = np.pad(array=side_info.numpy(), pad_width=((lm_padding_at_start, lm_padding_at_end), (0, 0)),
                                            mode='constant', constant_values=0)
                     side_info = torch.from_numpy(side_info_padded).type(torch.float32)
