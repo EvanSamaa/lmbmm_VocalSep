@@ -340,6 +340,8 @@ class NUSMusicTrain(torch.utils.data.Dataset):
         return 853  # number of NUS utterances assigned to training set
 
     def __getitem__(self, idx):
+        if idx == 78:
+            idx = 79
         # get speech file os.path.join(self.addr_dict["dataset_root"], 'TIMIT/TIMIT_torch/train/{}.pt'.format(idx))
         speech = torch.load(os.path.join(self.data_set_root, '{}.pt'.format(idx)))
         # print(os.path.join(self.data_set_root, '{}.pt'.format(idx)))
@@ -356,7 +358,7 @@ class NUSMusicTrain(torch.utils.data.Dataset):
             # pad the speech signal to same length as music
             speech_len = speech.size()[1]
             music_len = music.size()[1]
-            print(music_len, music_idx, speech_len, idx)
+            # print(music_len, music_idx, speech_len, idx)
             padding_at_start = int(
                 (torch.randint(0, int(np.floor((music_len - speech_len) / 16000 * 24)), size=(1,))) /24*16000)
             padding_at_end = music_len - padding_at_start - speech_len
