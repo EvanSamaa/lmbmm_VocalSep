@@ -815,7 +815,7 @@ class LandmarkInformedOpenUnmix3(_Model):
         self.landmarkCount = landmarkCount
         self.attention = attention
         # self.lstm_txt = LSTM(vocab_size, hidden_size//2, num_layers=1, batch_first=True, bidirectional=True)
-        self.lstm_lm = LSTM(landmarkCount*2, hidden_size//2, num_layers=1, batch_first=True, bidirectional=True)
+        # self.fc_lm = LSTM(landmarkCount*2, hidden_size//2, num_layers=1, batch_first=True, bidirectional=True)
         # attention
 
         # w_s_init = torch.empty(hidden_size, hidden_size)
@@ -824,7 +824,7 @@ class LandmarkInformedOpenUnmix3(_Model):
         # self.w_s = nn.Parameter(w_s_init, requires_grad=True)
 
         # connection
-        self.fc_c = Linear(hidden_size * 2, hidden_size)
+        self.fc_c = Linear(hidden_size + 76, hidden_size)
         self.bn_c = BatchNorm1d(hidden_size)
 
         self.nb_output_bins = n_fft // 2 + 1
@@ -963,45 +963,17 @@ class LandmarkInformedOpenUnmix3(_Model):
         # squash range ot [-1, 1]
         x = torch.tanh(x)
         x, _ = self.audio_encoder_lstm(x)
-        # -------------------------------------------------------------------------------------------------------------
-        # attention
-        # batch_size = h.size(0)
-        # x = x.transpose(0, 1)  # to shape (nb_samples, nb_frames, self.hidden_size)
-        #
-        # # compute score = g_n * W_s * h_m in two steps
-        # side_info_transformed = torch.bmm(self.w_s.expand(batch_size, -1, -1),
-        #                                   torch.transpose(h, 1, 2))
-        #
-        # scores = torch.bmm(x, side_info_transformed)
-        # self.attention = "dtw"
-        #
-        # if self.attention == 'general':
-        #     # compute the attention weights of all side information steps for all audio time steps
-        #     alphas = F.softmax(scores, dim=2)  # shape: (nb_samples, N, M)
-        # elif self.attention == 'dtw':
-        #     if self.optimal_path_alphas:
-        #         # use the (non-differentiable) optimal path as attention weights (at test time if desired)
-        #         alphas = torch.tensor(optimal_alignment_path(scores), device=scores.device)\
-        #             .unsqueeze(0).to(torch.float32)
-        #     else:
-        #         dtw_alphas = dtw_matrix(scores, mode='faster')
-        #         alphas = F.softmax(dtw_alphas, dim=2)
-        #
-        #
-        # # compute context vectors
-        # context = torch.bmm(torch.transpose(h, 1, 2), torch.transpose(alphas, 1, 2))
-        #
-        # # make shape: (nb_samples, N, hidden_size)
-        # context = torch.transpose(context, 1, 2)
 
-        # -------------------------------------------------------------------------------------------------------------
         # connection of audio and text
         # landmarks = [Batch, T, L*2]
+        # nb_lm_samples, nb_lm_frames, nb_lm_channels = landmarks.shape
         landmarks = landmarks.permute((0, 2, 1))
         # landmarks = [Batch, L*2, new_T]
         landmarks = F.interpolate(landmarks, x.shape[0])
         landmarks = landmarks.permute((2, 0, 1))
-        context = self.lstm_lm(landmarks)[0]
+        # landmarks = [new_T, Batch, L*2]
+        # context = self.lstm_lm(landmarks)[0]
+        context = landmarks
         concat = torch.cat((context, x), dim=2)
         x = self.fc_c(concat)
         x = self.bn_c(x.transpose(1, 2))  # (nb_samples, hidden_size, nb_frames)
