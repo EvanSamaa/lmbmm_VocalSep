@@ -70,7 +70,7 @@ def train_model(specs, model):
     # setting up training environment and variables
     writer = SummaryWriter(logdir=os.path.join('tensorboard', model_path_name))
     use_cuda = torch.cuda.is_available()
-    device = torch.device("cuda:1" if use_cuda else "cpu")
+    device = torch.device("cuda:0" if use_cuda else "cpu")
     print("Using GPU:", use_cuda)
     print("Using Torchaudio: ", utils._torchaudio_available())
     t = tqdm.trange(1, specs["epochs"] + 1)
