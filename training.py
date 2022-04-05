@@ -53,7 +53,6 @@ def valid(args, unmix, device, valid_sampler):
             loss = loss_fn(Y_hat, Y)
             losses.update(loss.item(), Y.size(1))
         return losses.avg #, sdr_avg.avg, sar_avg.avg, sir_avg.avg
-
 def train_model(specs, model):
     model_path_name = specs["name"]
     sr = specs["sample_rate"]
@@ -190,9 +189,6 @@ def train_model(specs, model):
         if stop:
             print("Apply Early Stopping")
             break
-
-
-
 if __name__ == "__main__":
 
     # input dict
@@ -208,8 +204,8 @@ if __name__ == "__main__":
     # model_to_train = model.LandmarkInformedOpenUnmix3(sample_rate=specs["sample_rate"], landmarkCount=38)
     # train_model(specs, model_to_train)
 
-    with open("training_specs/toy_example_naive_landmark_unmix.json") as f:
+    with open("training_specs/naive_landmark_unmix_only_toy_NUS_ONLY.json") as f:
         specs = json.load(f)
     # input_specs
-    model_to_train = model.LandmarkInformedOpenUnmix3(sample_rate=specs["sample_rate"], landmarkCount=38)
+    model_to_train = model.OpenUnmixWithLandmarks(sample_rate=specs["sample_rate"], landmarkCount=38)
     train_model(specs, model_to_train)

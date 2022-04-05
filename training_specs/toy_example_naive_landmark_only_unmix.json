@@ -2,7 +2,7 @@
   "sample_rate": 16000,
   "n_fft": 512,
   "n_hop": 256,
-  "name": "naive_landmark_unmix_toy_NUS_ONLY_test",
+  "name": "naive_landmark_unmix_only_toy_NUS_ONLY",
   "dataset": "NUS_landmark",
   "pre_train_location": "",
   "seed": 0,
