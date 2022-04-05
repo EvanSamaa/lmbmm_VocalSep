@@ -328,7 +328,7 @@ class OpenUnmixWithLandmarks(_Model):
             self.transform = nn.Sequential(self.stft, self.spec)
 
         self.fc1 = Linear(
-            self.nb_bins*nb_channels+landmarkCount*2, hidden_size,
+            self.nb_bins*nb_channels, hidden_size,
             bias=False
         )
 
@@ -341,7 +341,7 @@ class OpenUnmixWithLandmarks(_Model):
             lstm_hidden_size = hidden_size // 2
 
         self.lstm = LSTM(
-            input_size=hidden_size,
+            input_size=hidden_size+landmarkCount*2,
             hidden_size=lstm_hidden_size,
             num_layers=nb_layers,
             bidirectional=not unidirectional,
@@ -350,7 +350,7 @@ class OpenUnmixWithLandmarks(_Model):
         )
 
         self.fc2 = Linear(
-            in_features=hidden_size*2,
+            in_features=hidden_size*2+landmarkCount*2,
             out_features=hidden_size,
             bias=False
         )
@@ -406,8 +406,9 @@ class OpenUnmixWithLandmarks(_Model):
 
     def forward(self, x):
         # ignore potential side info that has been given as input
-        x = x[0]
         landmarks = x[1]  # the facial landmarks, likely in the shape of [Batch, T, L*2]
+        x = x[0]
+
 
         # check for waveform or spectrogram
         # transform to spectrogram if (nb_samples, nb_channels, nb_timesteps)
@@ -427,20 +428,21 @@ class OpenUnmixWithLandmarks(_Model):
         # to (nb_frames*nb_samples, nb_channels*nb_bins)
         x = x.reshape(-1, nb_channels * self.nb_bins)
         # and encode to (nb_frames*nb_samples, hidden_size)
-        landmarks = landmarks.permute((0, 2, 1))
-        # landmarks = [Batch, L*2, new_T]
-        landmarks = F.interpolate(landmarks, x.shape[0])
-        # landmarks = [new_T, Batch, L*2]
-        context = landmarks.permute((2, 0, 1))
-        context = context.reshape(x.shape[0], landmarks.shape[2])
 
-        x = torch.cat((context, x), dim=2)
+        # x = torch.cat((context, x), dim=2)
         x = self.fc1(x)
         # normalize every instance in a batch
         x = self.bn1(x)
         x = x.reshape(nb_frames, nb_samples, self.hidden_size)
         # squash range ot [-1, 1]
         x = torch.tanh(x)
+
+        landmarks = landmarks.permute((0, 2, 1))
+        # landmarks = [Batch, L*2, new_T]
+        landmarks = F.interpolate(landmarks, x.shape[0])
+        # landmarks = [new_T, Batch, L*2]
+        context = landmarks.permute((2, 0, 1))
+        x = torch.cat((context, x), dim=2)
 
         # apply 3-layers of stacked LSTM
         lstm_out = self.lstm(x)
