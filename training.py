@@ -208,8 +208,8 @@ if __name__ == "__main__":
     # model_to_train = model.LandmarkInformedOpenUnmix3(sample_rate=specs["sample_rate"], landmarkCount=38)
     # train_model(specs, model_to_train)
 
-    with open("training_specs/toy_example_naive_landmark_unmix_test.json") as f:
+    with open("training_specs/toy_example_naive_landmark_unmix.json") as f:
         specs = json.load(f)
     # input_specs
-    model_to_train = model.LandmarkInformedOpenUnmix3test(sample_rate=specs["sample_rate"], landmarkCount=38)
+    model_to_train = model.LandmarkInformedOpenUnmix3(sample_rate=specs["sample_rate"], landmarkCount=38)
     train_model(specs, model_to_train)

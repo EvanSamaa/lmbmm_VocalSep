@@ -404,12 +404,7 @@ class NUSMusicTrain(torch.utils.data.Dataset):
                 # does not enable learning the alignment)
                 side_info[0] = 3
                 side_info[-1] = 3
-        else:
-            # this will stay like this for now until I implement the data
-            side_info = torch.ones_like(music)
 
-        if self.text_units == 'ones':
-            side_info = torch.ones_like(side_info)
         target_snr = torch.rand(size=(1,)) * (-8)
         mix, speech, music = self.mix_with_snr(target_snr, torch.from_numpy(speech_padded).type(torch.float32),
                                                music, padding_at_start, speech_len)
