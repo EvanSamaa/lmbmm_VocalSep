@@ -1003,7 +1003,10 @@ def prepare_NUS_landmarks():
 def prepare_instrumental():
     with open('location_dict.json') as f:
         dataset_path_dict = json.load(f)
-    dataset_path = os.path.join(dataset_path_dict["dataset_root"], 'instrumentals')
+    if dataset_path_dict["dataset_root"] == "/scratch/local/2021/Evan/":
+        dataset_path = os.path.join(dataset_path_dict["dataset_root"], 'instrumentals')
+    else:
+        dataset_path = os.path.join(dataset_path_dict["dataset_root"], 'Separation_data_sets/instrumentals')
     output_path = os.path.join(dataset_path_dict["dataset_root"], 'lmbmm_vocal_sep_data/INSTRUMENT/data/')
     # val_output_path = os.path.join(dataset_path_dict["dataset_root"], 'INSTRUMENT/test/')
     counter = 0

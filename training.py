@@ -86,8 +86,8 @@ def train_model(specs, model):
         train_dataset = NUSMusicTrain(None, fixed_length=True, mono=True)
         valid_dataset = NUSMusicTest(None, fixed_length=True, size=500, mono=True)
     elif specs["dataset"] == "NUS_landmark":
-        train_dataset = NUSMusicTrain("landmarks", fixed_length=True, mono=True, landmarkNoise=0.02)
-        valid_dataset = NUSMusicTest("landmarks", fixed_length=True, mono=True, landmarkNoise=0.02)
+        train_dataset = NUSMusicTrain("landmarks", fixed_length=True, mono=True, landmarkNoise=0)
+        valid_dataset = NUSMusicTest("landmarks", fixed_length=True, mono=True, landmarkNoise=0)
     train_sampler = torch.utils.data.DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True, drop_last=True,
     )
