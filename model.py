@@ -634,7 +634,7 @@ class OpenUnmixWithLandmarks2(_Model):
 
         landmarks = landmarks.permute((0, 2, 1))
         # landmarks = [Batch, L*2, new_T]
-        landmarks = F.interpolate(landmarks, x.shape[0])
+        landmarks = F.interpolate(landmarks, x.shape[0], mode="linear")
         # landmarks = [new_T, Batch, L*2]
         context = landmarks.permute((2, 0, 1))
         context,_ = self.landmarks_lstm(context)
