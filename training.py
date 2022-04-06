@@ -171,11 +171,12 @@ def train_model(specs, model):
 
             target_model_path = Path(model_path, "vocal" + ".chkpnt")
             checkpoint = torch.load(target_model_path, map_location=device)
-
+            print("loaded checkpoint")
 
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
             scheduler.load_state_dict(checkpoint['scheduler'])
+            print("loaded model, optimizer, and schedueler")
             # train for another arg.epochs
             t = tqdm.trange(
                 results['epochs_trained'],
