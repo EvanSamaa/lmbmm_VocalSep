@@ -10,7 +10,7 @@
   "batch-size": 16,
   "lr": 0.001,
   "weight_decay": 0,
-  "patience": 140,
+  "patience": 50,
   "lr-decay-patience": 80,
   "lr-decay-gamma": 0.3,
   "epochs": 1000
