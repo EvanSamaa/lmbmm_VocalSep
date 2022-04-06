@@ -174,9 +174,11 @@ def train_model(specs, model):
             print("loaded checkpoint")
 
             model.load_state_dict(checkpoint['state_dict'])
+            print("loaded model")
             optimizer.load_state_dict(checkpoint['optimizer'])
+            print("loaded optimizer")
             scheduler.load_state_dict(checkpoint['scheduler'])
-            print("loaded model, optimizer, and schedueler")
+            print("loaded schedueler")
             # train for another arg.epochs
             t = tqdm.trange(
                 results['epochs_trained'],
