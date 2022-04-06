@@ -3,7 +3,7 @@
   "n_fft": 512,
   "n_hop": 256,
   "name": "unmix_toy_NUS_ONLY",
-  "dataset": "NUS",
+  "dataset": "NUS_landmark",
   "pre_train_location": "",
   "seed": 0,
   "batch-size": 16,
