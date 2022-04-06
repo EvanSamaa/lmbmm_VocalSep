@@ -283,7 +283,6 @@ class OpenUnmix(_Model):
 
         return x
 
-
 class OpenUnmixWithLandmarks(_Model):
     def __init__(
         self,
@@ -442,6 +441,206 @@ class OpenUnmixWithLandmarks(_Model):
         landmarks = F.interpolate(landmarks, x.shape[0])
         # landmarks = [new_T, Batch, L*2]
         context = landmarks.permute((2, 0, 1))
+        x = torch.cat((context, x), dim=2)
+
+        # apply 3-layers of stacked LSTM
+        lstm_out = self.lstm(x)
+
+        # lstm skip connection
+        x = torch.cat([x, lstm_out[0]], -1)
+
+        # first dense stage + batch norm
+        x = self.fc2(x.reshape(-1, x.shape[-1]))
+        x = self.bn2(x)
+
+        x = F.relu(x)
+
+        # second dense stage + layer norm
+        x = self.fc3(x)
+        x = self.bn3(x)
+
+        # reshape back to original dim
+        x = x.reshape(nb_frames, nb_samples, nb_channels, self.nb_output_bins)
+
+        # apply output scaling
+        x *= self.output_scale
+        x += self.output_mean
+
+        # since our output is non-negative, we can apply RELU
+        x = F.relu(x) * mix
+
+        return x
+class OpenUnmixWithLandmarks2(_Model):
+    def __init__(
+        self,
+        n_fft=4096,
+        n_hop=1024,
+        input_is_spectrogram=False,
+        hidden_size=512,
+        nb_channels=2,
+        sample_rate=44100,
+        nb_layers=3,
+        input_mean=None,
+        input_scale=None,
+        max_bin=None,
+        unidirectional=False,
+        landmarkCount = 38,
+        power=1,
+    ):
+        """
+        Input: (nb_samples, nb_channels, nb_timesteps)
+            or (nb_frames, nb_samples, nb_channels, nb_bins)
+        Output: Power/Mag Spectrogram
+                (nb_frames, nb_samples, nb_channels, nb_bins)
+        """
+
+        super(OpenUnmixWithLandmarks2, self).__init__()
+
+        self.nb_output_bins = n_fft // 2 + 1
+        if max_bin:
+            self.nb_bins = max_bin
+        else:
+            self.nb_bins = self.nb_output_bins
+
+        self.hidden_size = hidden_size
+
+        self.stft = STFT(n_fft=n_fft, n_hop=n_hop)
+        self.spec = Spectrogram(power=power, mono=(nb_channels == 1))
+        self.register_buffer('sample_rate', torch.tensor(sample_rate))
+
+        if input_is_spectrogram:
+            self.transform = NoOp()
+        else:
+            self.transform = nn.Sequential(self.stft, self.spec)
+
+        self.fc1 = Linear(
+            self.nb_bins*nb_channels, hidden_size,
+            bias=False
+        )
+        self.landmarks_lstm = LSTM(
+            input_size=landmarkCount*2,
+            hidden_size=64,
+            num_layers=nb_layers,
+            bidirectional=not unidirectional,
+            batch_first=False,
+            dropout=0.4,
+        )
+
+
+        self.bn1 = BatchNorm1d(hidden_size)
+        # self.bn_landmarks = BatchNorm1d(64)
+
+        if unidirectional:
+            lstm_hidden_size = hidden_size
+        else:
+            lstm_hidden_size = hidden_size // 2
+
+        self.lstm = LSTM(
+            input_size=hidden_size+64*2,
+            hidden_size=lstm_hidden_size,
+            num_layers=nb_layers,
+            bidirectional=not unidirectional,
+            batch_first=False,
+            dropout=0.4,
+        )
+
+        self.fc2 = Linear(
+            in_features=hidden_size*2+64*2,
+            out_features=hidden_size,
+            bias=False
+        )
+
+        self.bn2 = BatchNorm1d(hidden_size)
+
+        self.fc3 = Linear(
+            in_features=hidden_size,
+            out_features=self.nb_output_bins*nb_channels,
+            bias=False
+        )
+
+        self.bn3 = BatchNorm1d(self.nb_output_bins*nb_channels)
+
+        if input_mean is not None:
+            input_mean = torch.from_numpy(
+                -input_mean[:self.nb_bins]
+            ).float()
+        else:
+            input_mean = torch.zeros(self.nb_bins)
+
+        if input_scale is not None:
+            input_scale = torch.from_numpy(
+                1.0/input_scale[:self.nb_bins]
+            ).float()
+        else:
+            input_scale = torch.ones(self.nb_bins)
+
+        self.input_mean = Parameter(input_mean)
+        self.input_scale = Parameter(input_scale)
+
+        self.output_scale = Parameter(
+            torch.ones(self.nb_output_bins).float()
+        )
+        self.output_mean = Parameter(
+            torch.ones(self.nb_output_bins).float()
+        )
+
+    @classmethod
+    def from_config(cls, config: dict):
+        keys = config.keys()
+        scaler_mean = config['scaler_mean'] if 'scaler_mean' in keys else None
+        scaler_std = config['scaler_std'] if 'scaler_std' in keys else None
+        return cls(input_mean=scaler_mean,
+                   input_scale=scaler_std,
+                   nb_channels=config['nb_channels'],
+                   hidden_size=config['hidden_size'],
+                   n_fft=config['nfft'],
+                   n_hop=config['nhop'],
+                   max_bin=config['max_bin'],
+                   sample_rate=config['samplerate']
+                   )
+
+    def forward(self, x):
+        # ignore potential side info that has been given as input
+        landmarks = x[1]  # the facial landmarks, likely in the shape of [Batch, T, L*2]
+        x = x[0]
+
+
+        # check for waveform or spectrogram
+        # transform to spectrogram if (nb_samples, nb_channels, nb_timesteps)
+        # and reduce feature dimensions, therefore we reshape
+        x = self.transform(x)
+        nb_frames, nb_samples, nb_channels, nb_bins = x.data.shape
+
+        mix = x.detach().clone()
+
+        # crop
+        x = x[..., :self.nb_bins]
+
+        # shift and scale input to mean=0 std=1 (across all bins)
+        x += self.input_mean
+        x *= self.input_scale
+
+        # to (nb_frames*nb_samples, nb_channels*nb_bins)
+        x = x.reshape(-1, nb_channels * self.nb_bins)
+        # and encode to (nb_frames*nb_samples, hidden_size)
+
+        # x = torch.cat((context, x), dim=2)
+        x = self.fc1(x)
+        # normalize every instance in a batch
+        x = self.bn1(x)
+        x = x.reshape(nb_frames, nb_samples, self.hidden_size)
+        # squash range ot [-1, 1]
+        x = torch.tanh(x)
+
+        landmarks = landmarks.permute((0, 2, 1))
+        # landmarks = [Batch, L*2, new_T]
+        landmarks = F.interpolate(landmarks, x.shape[0])
+        # landmarks = [new_T, Batch, L*2]
+        context = landmarks.permute((2, 0, 1))
+        context,_ = self.landmarks_lstm(context)
+        context = torch.tanh(context)
+
+
         x = torch.cat((context, x), dim=2)
 
         # apply 3-layers of stacked LSTM
