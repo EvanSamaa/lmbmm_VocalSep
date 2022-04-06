@@ -406,6 +406,7 @@ class NUSMusicTrain(torch.utils.data.Dataset):
                 side_infoY = torch.sum(torch.square(side_info[:, 33] - side_info[:, 29]), axis=1)
                 side_infoX = torch.sum(torch.square(side_info[:, 31] - side_info[:, 27]), axis=1)
                 side_info = torch.cat([torch.unsqueeze(side_infoY, 1), torch.unsqueeze(side_infoX, 1)], axis=1)
+                side_info = torch.sqrt(side_info)
                 shape = [int(side_info.shape[0]), int(side_info.shape[1])]
                 # side_info = side_info.view(shape[0], shape[1])
                 if self.fixed_length:
@@ -555,6 +556,7 @@ class NUSMusicTest(torch.utils.data.Dataset):
                 side_infoY = torch.sum(torch.square(side_info[:, 33] - side_info[:, 29]), axis=1)
                 side_infoX = torch.sum(torch.square(side_info[:, 31] - side_info[:, 27]), axis=1)
                 side_info = torch.cat([torch.unsqueeze(side_infoY, 1), torch.unsqueeze(side_infoX, 1)], axis=1)
+                side_info = torch.sqrt(side_info)
                 shape = [int(side_info.shape[0]), int(side_info.shape[1])]
                 # side_info = side_info.view(shape[0], shape[1])
                 if self.fixed_length:
