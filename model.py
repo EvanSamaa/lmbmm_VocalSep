@@ -342,7 +342,7 @@ class OpenUnmixWithLandmarks(_Model):
 
         self.lstm = LSTM(
             input_size=hidden_size+landmarkCount*2,
-            hidden_size=lstm_hidden_size,
+            hidden_size=lstm_hidden_size-landmarkCount,
             num_layers=nb_layers,
             bidirectional=not unidirectional,
             batch_first=False,
@@ -350,7 +350,7 @@ class OpenUnmixWithLandmarks(_Model):
         )
 
         self.fc2 = Linear(
-            in_features=hidden_size*2+landmarkCount*2,
+            in_features=hidden_size*2,
             out_features=hidden_size,
             bias=False
         )
