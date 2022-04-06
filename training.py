@@ -34,7 +34,7 @@ def multiHeadTrain(args, unmix, device, train_sampler, optimizer):
         # landmarks = [new_T, Batch, L*2]
         L = L.permute((0, 2, 1))
 
-        loss = loss_fn(Y_hat, Y) + loss_fn2(L_hat, L)
+        loss = loss_fn(Y_hat, Y) + loss_fn2(L_hat, L) * 0.001
         loss.backward()
         torch.nn.utils.clip_grad_norm_(unmix.parameters(), max_norm=2, norm_type=1)
         optimizer.step()
