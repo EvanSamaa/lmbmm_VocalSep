@@ -164,26 +164,29 @@ def train_model(specs, model):
     es = utils.EarlyStopping(patience=specs["patience"])
 
     if specs["pre_train_location"] != "":
-        model_path = Path(os.path.join('trained_models/', specs["pre_train_location"])).expanduser()
-        with open(Path(os.path.join(model_path, "vocal" + '.json')), 'r') as stream:
-            results = json.load(stream)
+        try:
+            model_path = Path(os.path.join('trained_models/', specs["pre_train_location"])).expanduser()
+            with open(Path(os.path.join(model_path, "vocal" + '.json')), 'r') as stream:
+                results = json.load(stream)
 
-        target_model_path = Path(model_path, "vocal" + ".chkpnt")
-        checkpoint = torch.load(target_model_path, map_location=device)
+            target_model_path = Path(model_path, "vocal" + ".chkpnt")
+            checkpoint = torch.load(target_model_path, map_location=device)
 
 
-        model.load_state_dict(checkpoint['state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        scheduler.load_state_dict(checkpoint['scheduler'])
-        # train for another arg.epochs
-        t = tqdm.trange(
-            results['epochs_trained'],
-            results['epochs_trained'] + specs["epochs"] + 1,
-        )
-        train_losses = results['train_loss_history']
-        valid_losses = results['valid_loss_history']
-        train_times = results['train_time_history']
-        best_epoch = 0
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            scheduler.load_state_dict(checkpoint['scheduler'])
+            # train for another arg.epochs
+            t = tqdm.trange(
+                results['epochs_trained'],
+                results['epochs_trained'] + specs["epochs"] + 1,
+            )
+            train_losses = results['train_loss_history']
+            valid_losses = results['valid_loss_history']
+            train_times = results['train_time_history']
+            best_epoch = 0
+        except:
+            print("model loading unsuccessful")
 
     # else start from 0
     else:
@@ -264,11 +267,18 @@ if __name__ == "__main__":
     # train_model(specs, model_to_train)
 
     # proposed model 2
-    # with open("training_specs/toy_example_lstm_landmark_only_unmix.json") as f:
-    #     specs = json.load(f)
-    # # input_specs
-    # model_to_train = model.OpenUnmixWithLandmarks2(sample_rate=specs["sample_rate"], landmarkCount=38)
-    # train_model(specs, model_to_train)
+    with open("training_specs/toy_example_lstm_landmark_only_unmix.json") as f:
+        specs = json.load(f)
+    # input_specs
+    model_to_train = model.OpenUnmixWithLandmarks2(sample_rate=specs["sample_rate"], landmarkCount=38)
+    train_model(specs, model_to_train)
+
+    # proposed model 4
+    with open("training_specs/toy_example_only_unmix_duo_objective.json") as f:
+        specs = json.load(f)
+    # input_specs
+    model_to_train = model.OpenUnmixWithLandmarks4(sample_rate=specs["sample_rate"], landmarkCount=38)
+    train_model(specs, model_to_train)
 
     # proposed model 3
     with open("training_specs/toy_example_naive_landmark_only_unmix_duo_objective.json") as f:

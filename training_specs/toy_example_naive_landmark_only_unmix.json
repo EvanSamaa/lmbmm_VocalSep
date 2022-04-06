@@ -5,7 +5,7 @@
   "name": "naive_landmark_unmix_only_toy_NUS_ONLY",
   "dataset": "NUS_landmark",
   "obejective_fn": "separation",
-  "pre_train_location": "",
+  "pre_train_location": "naive_landmark_unmix_only_toy_NUS_ONLY",
   "seed": 0,
   "batch-size": 16,
   "lr": 0.001,
