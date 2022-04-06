@@ -493,6 +493,8 @@ class NUSMusicTest(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         # get speech file os.path.join(self.addr_dict["dataset_root"], 'TIMIT/TIMIT_torch/train/{}.pt'.format(idx))
         speech = torch.load(os.path.join(self.data_set_root, '{}.pt'.format(idx)))
+        # print(os.path.join(self.data_set_root, '{}.pt'.format(idx)))
+        # print(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))
         if self.mono:
             speech = speech.unsqueeze(0)
             speech = speech.tile((2,1))
@@ -500,19 +502,18 @@ class NUSMusicTest(torch.utils.data.Dataset):
         music_idx = torch.randint(low=0, high=len(self.list_of_music_files), size=(1,))
         music_file = self.list_of_music_files[music_idx]
         music = torch.load(os.path.join(self.data_set_root, music_file))
-        padding_at_start = 0
-        padding_at_end = 0
+
         if self.fixed_length:
             # pad the speech signal to same length as music
             speech_len = speech.size()[1]
             music_len = music.size()[1]
+            # print(music_len, music_idx, speech_len, idx)
             padding_at_start = int(
-                (torch.randint(0, int(np.floor((music_len - speech_len) / 16000 * 24)), size=(1,))) / 24 * 16000)
+                (torch.randint(0, int(np.floor((music_len - speech_len) / 16000 * 24)), size=(1,))) /24*16000)
             padding_at_end = music_len - padding_at_start - speech_len
             # print(music_len, speech_len, padding_at_start, padding_at_end)
             speech_padded = np.pad(array=speech.numpy(), pad_width=((0, 0), (padding_at_start, padding_at_end)),
                                    mode='constant', constant_values=0)
-
         else:
             speech_len = speech.size()[1]
             music_len = music.size()[1]
@@ -524,8 +525,7 @@ class NUSMusicTest(torch.utils.data.Dataset):
             music = music[:, 0:speech_padded.shape[1]]
         if not self.path_to_text_sequences is None:
             if self.text_units == "landmarks":
-                side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))[:, :,
-                            0:2]
+                side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))[:, :, 0:2]
                 # from matplotlib import pyplot as plt
                 # test = side_info + torch.normal(0, self.landmarkNoise, side_info.shape)
                 # test = test.cpu().detach().numpy()
@@ -537,16 +537,14 @@ class NUSMusicTest(torch.utils.data.Dataset):
                 noise = torch.normal(0, self.landmarkNoise, side_info.shape)
                 side_info = side_info + noise
                 if self.fixed_length:
-                    lm_padding_at_start = int(np.floor(padding_at_start / 666.67))
-                    lm_padding_at_end = int(music_len / 16000) * 24 - lm_padding_at_start - shape[0]
-                    # print(int(music_len / 16000) * 24, shape[0], lm_padding_at_start, lm_padding_at_end)
-                    side_info_padded = np.pad(array=side_info.numpy(),
-                                              pad_width=((lm_padding_at_start, lm_padding_at_end), (0, 0)),
-                                              mode='constant', constant_values=0)
+                    lm_padding_at_start = int(np.floor(padding_at_start/666.67))
+                    lm_padding_at_end = int(music_len/16000)*24 - lm_padding_at_start - shape[0]
+                    # print(int(music_len/16000)*24, shape[0], lm_padding_at_start, lm_padding_at_end)
+                    side_info_padded = np.pad(array=side_info.numpy(), pad_width=((lm_padding_at_start, lm_padding_at_end), (0, 0)),
+                                           mode='constant', constant_values=0)
                     side_info = torch.from_numpy(side_info_padded).type(torch.float32)
             elif self.text_units == "landmarks_sparse":
-                side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))[:,
-                            :,
+                side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))[:, :,
                             0:2]
                 # from matplotlib import pyplot as plt
                 # test = side_info + torch.normal(0, self.landmarkNoise, side_info.shape)
@@ -567,6 +565,7 @@ class NUSMusicTest(torch.utils.data.Dataset):
                                               pad_width=((lm_padding_at_start, lm_padding_at_end), (0, 0)),
                                               mode='edge')
                     side_info = torch.from_numpy(side_info_padded).type(torch.float32)
+
             else:
                 side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}.pt'.format(idx)))
             if self.space_token_only:
@@ -578,12 +577,6 @@ class NUSMusicTest(torch.utils.data.Dataset):
                 # does not enable learning the alignment)
                 side_info[0] = 3
                 side_info[-1] = 3
-        else:
-            # this will stay like this for now until I implement the data
-            side_info = torch.ones_like(music)
-
-        if self.text_units == 'ones':
-            side_info = torch.ones_like(side_info)
 
         target_snr = torch.rand(size=(1,)) * (-8)
         mix, speech, music = self.mix_with_snr(target_snr, torch.from_numpy(speech_padded).type(torch.float32),
