@@ -918,7 +918,7 @@ class OpenUnmixWithLandmarks4(_Model):
                 (nb_frames, nb_samples, nb_channels, nb_bins)
         """
 
-        super(OpenUnmixWithLandmarks3, self).__init__()
+        super(OpenUnmixWithLandmarks4, self).__init__()
 
         self.nb_output_bins = n_fft // 2 + 1
         if max_bin:
