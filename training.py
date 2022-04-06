@@ -33,12 +33,12 @@ def multiHeadTrain(args, unmix, device, train_sampler, optimizer):
         L = F.interpolate(L, L_hat.shape[1])
         # landmarks = [new_T, Batch, L*2]
         L = L.permute((0, 2, 1))
-
-        loss = loss_fn(Y_hat, Y) + loss_fn2(L_hat, L) * 0.001
+        loss1 = loss_fn(Y_hat, Y)
+        loss = loss1 + loss_fn2(L_hat, L) * 0.001
         loss.backward()
         torch.nn.utils.clip_grad_norm_(unmix.parameters(), max_norm=2, norm_type=1)
         optimizer.step()
-        losses.update(loss.item(), Y.size(1))
+        losses.update(loss1.item(), Y.size(1))
     return losses.avg
 def multiHeadValid(args, unmix, device, valid_sampler):
     losses = utils.AverageMeter()
