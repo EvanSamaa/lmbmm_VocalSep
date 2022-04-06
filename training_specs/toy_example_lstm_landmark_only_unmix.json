@@ -4,6 +4,7 @@
   "n_hop": 256,
   "name": "lst_landmark_unmix_only_toy_NUS_ONLY",
   "dataset": "NUS_landmark",
+  "obejective_fn": "separation",
   "pre_train_location": "",
   "seed": 0,
   "batch-size": 16,

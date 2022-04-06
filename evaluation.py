@@ -2,7 +2,8 @@ import torch
 import model
 import json
 
-def pipeline(fileName):
+def qualitative_eval_pipeline(fileName):
+
     return 0
 
 

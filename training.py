@@ -6,7 +6,61 @@ from tensorboardX import SummaryWriter
 from util.data_loader import *
 import util.utils as utils
 import time
+import torch.nn.functional as F
 
+def multiHeadTrain(args, unmix, device, train_sampler, optimizer):
+    losses = utils.AverageMeter()
+    unmix.train()
+    unmix.stft.center = True
+    pbar = tqdm.tqdm(train_sampler)
+    for data in pbar:
+        pbar.set_description("Training batch")
+        x = data[0]  # mix
+        y = data[1]  # target
+        z = data[2]  # text
+        x, y, z = x.to(device), y.to(device), z.to(device)
+        optimizer.zero_grad()
+        # if args.alignment_from:
+        #     inputs = (x, z, data[3].to(device))  # add attention weights to input
+        # else:
+        inputs = (x, z)
+        Y_hat, L_hat = unmix(inputs)
+        Y = unmix.transform(y)
+        loss_fn = torch.nn.L1Loss(reduction='sum')
+        loss_fn2 = torch.nn.MSELoss()
+        L = z.permute((0, 2, 1))
+        # landmarks = [Batch, L*2, new_T]
+        L = F.interpolate(L, L_hat.shape[1])
+        # landmarks = [new_T, Batch, L*2]
+        L = L.permute((0, 2, 1))
+
+        loss = loss_fn(Y_hat, Y) + loss_fn2(L_hat, L)
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(unmix.parameters(), max_norm=2, norm_type=1)
+        optimizer.step()
+        losses.update(loss.item(), Y.size(1))
+    return losses.avg
+def multiHeadValid(args, unmix, device, valid_sampler):
+    losses = utils.AverageMeter()
+
+    unmix.eval()
+    unmix.stft.center = True
+    with torch.no_grad():
+        for data in valid_sampler:
+            x = data[0]  # mix
+            y = data[1]  # vocals
+            z = data[2]  # text
+            x, y, z = x.to(device), y.to(device), z.to(device)
+            # if args.alignment_from:
+            #     inputs = (x, z, data[3].to(device))  # add attention weight to input
+            # else:
+            inputs = (x, z)
+            Y_hat, L_hat = unmix(inputs)
+            Y = unmix.transform(y)
+            loss_fn = torch.nn.L1Loss(reduction='sum')  # in sms project, the loss is defined before looping over epochs
+            loss = loss_fn(Y_hat, Y)
+            losses.update(loss.item(), Y.size(1))
+        return losses.avg #, sdr_avg.avg, sar_avg.avg, sir_avg.avg
 def train(args, unmix, device, train_sampler, optimizer):
     losses = utils.AverageMeter()
     unmix.train()
@@ -143,8 +197,12 @@ def train_model(specs, model):
     for epoch in t:
         t.set_description("Training Epoch")
         end = time.time()
-        train_loss = train(specs, model, device, train_sampler, optimizer)
-        valid_loss = valid(specs, model, device, valid_sampler)
+        if specs["obejective_fn"] != "duo":
+            train_loss = train(specs, model, device, train_sampler, optimizer)
+            valid_loss = valid(specs, model, device, valid_sampler)
+        else:
+            train_loss = multiHeadTrain(specs, model, device, train_sampler, optimizer)
+            valid_loss = multiHeadValid(specs, model, device, valid_sampler)
         # valid_loss = valid(args, model, device, valid_sampler)
         writer.add_scalar("Training_cost", train_loss, epoch)
         writer.add_scalar("Validation_cost", valid_loss, epoch)
@@ -206,8 +264,15 @@ if __name__ == "__main__":
     # train_model(specs, model_to_train)
 
     # proposed model 2
-    with open("training_specs/toy_example_lstm_landmark_only_unmix.json") as f:
+    # with open("training_specs/toy_example_lstm_landmark_only_unmix.json") as f:
+    #     specs = json.load(f)
+    # # input_specs
+    # model_to_train = model.OpenUnmixWithLandmarks2(sample_rate=specs["sample_rate"], landmarkCount=38)
+    # train_model(specs, model_to_train)
+
+    # proposed model 3
+    with open("training_specs/toy_example_naive_landmark_only_unmix_duo_objective.json") as f:
         specs = json.load(f)
     # input_specs
-    model_to_train = model.OpenUnmixWithLandmarks2(sample_rate=specs["sample_rate"], landmarkCount=38)
+    model_to_train = model.OpenUnmixWithLandmarks3(sample_rate=specs["sample_rate"], landmarkCount=38)
     train_model(specs, model_to_train)
