@@ -141,6 +141,9 @@ def train_model(specs, model):
     elif specs["dataset"] == "NUS_landmark":
         train_dataset = NUSMusicTrain("landmarks", fixed_length=True, mono=True, landmarkNoise=0)
         valid_dataset = NUSMusicTest("landmarks", fixed_length=True, mono=True, landmarkNoise=0)
+    elif specs["dataset"] == "NUS_landmark_sparse":
+        train_dataset = NUSMusicTrain("landmarks_sparse", fixed_length=True, mono=True, landmarkNoise=0)
+        valid_dataset = NUSMusicTest("landmarks_sparse", fixed_length=True, mono=True, landmarkNoise=0)
     train_sampler = torch.utils.data.DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True, drop_last=True,
     )
@@ -296,9 +299,15 @@ if __name__ == "__main__":
     # train_model(specs, model_to_train)
 
     # proposed model 4
-    with open("training_specs/toy_example_fc_landmark_only_unmix.json") as f:
+    # with open("training_specs/toy_example_fc_landmark_only_unmix.json") as f:
+    #     specs = json.load(f)
+    # # input_specs
+    # model_to_train = model.OpenUnmixWithLandmarks6(sample_rate=specs["sample_rate"], landmarkCount=38)
+    # train_model(specs, model_to_train)
+
+    # proposed model 5
+    with open("training_specs/toy_example_2_landmark_only_unmix_duo_objective.json") as f:
         specs = json.load(f)
     # input_specs
-    model_to_train = model.OpenUnmixWithLandmarks6(sample_rate=specs["sample_rate"], landmarkCount=38)
+    model_to_train = model.OpenUnmixWithLandmarks5(sample_rate=specs["sample_rate"], landmarkCount=1)
     train_model(specs, model_to_train)
-

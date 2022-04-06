@@ -327,6 +327,9 @@ class NUSMusicTrain(torch.utils.data.Dataset):
         if text_units == "landmarks":
             self.path_to_text_sequences = os.path.join(self.addr_dict["dataset_root"],
                                                        'lmbmm_vocal_sep_data/NUS/train_landmarks_raw/')
+        if text_units == "landmarks_sparse":
+            self.path_to_text_sequences = os.path.join(self.addr_dict["dataset_root"],
+                                                       'lmbmm_vocal_sep_data/NUS/train_landmarks_raw/')
         if text_units == None:
             self.path_to_text_sequences = None
 
@@ -392,6 +395,27 @@ class NUSMusicTrain(torch.utils.data.Dataset):
                     side_info_padded = np.pad(array=side_info.numpy(), pad_width=((lm_padding_at_start, lm_padding_at_end), (0, 0)),
                                            mode='constant', constant_values=0)
                     side_info = torch.from_numpy(side_info_padded).type(torch.float32)
+            elif self.text_units == "landmarks_sparse":
+                side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))[:, :,
+                            0:2]
+                # from matplotlib import pyplot as plt
+                # test = side_info + torch.normal(0, self.landmarkNoise, side_info.shape)
+                # test = test.cpu().detach().numpy()
+                # plt.scatter(test[0, :, 0], test[0, :, 1])
+                # plt.show()
+                side_infoY = torch.sum(torch.square(side_info[:, 33] - side_info[:, 29]), axis=1)
+                side_infoX = torch.sum(torch.square(side_info[:, 31] - side_info[:, 27]), axis=1)
+                side_info = torch.cat([torch.unsqueeze(side_infoY, 1), torch.unsqueeze(side_infoX, 1)], axis=1)
+                shape = [int(side_info.shape[0]), int(side_info.shape[1])]
+                # side_info = side_info.view(shape[0], shape[1])
+                if self.fixed_length:
+                    lm_padding_at_start = int(np.floor(padding_at_start / 666.67))
+                    lm_padding_at_end = int(music_len / 16000) * 24 - lm_padding_at_start - shape[0]
+                    # print(int(music_len/16000)*24, shape[0], lm_padding_at_start, lm_padding_at_end)
+                    side_info_padded = np.pad(array=side_info.numpy(),
+                                              pad_width=((lm_padding_at_start, lm_padding_at_end), (0, 0)),
+                                              mode='constant', constant_values=0)
+                    side_info = torch.from_numpy(side_info_padded).type(torch.float32)
 
             else:
                 side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}.pt'.format(idx)))
@@ -450,6 +474,9 @@ class NUSMusicTest(torch.utils.data.Dataset):
         if text_units == "landmarks":
             self.path_to_text_sequences = os.path.join(self.addr_dict["dataset_root"],
                                                        'lmbmm_vocal_sep_data/NUS/test_landmarks_raw')
+        if text_units == "landmarks_sparse":
+            self.path_to_text_sequences = os.path.join(self.addr_dict["dataset_root"],
+                                                       'lmbmm_vocal_sep_data/NUS/test_landmarks_raw/')
         if text_units == None:
             self.path_to_text_sequences = None
 
@@ -516,7 +543,28 @@ class NUSMusicTest(torch.utils.data.Dataset):
                                               pad_width=((lm_padding_at_start, lm_padding_at_end), (0, 0)),
                                               mode='constant', constant_values=0)
                     side_info = torch.from_numpy(side_info_padded).type(torch.float32)
-
+            elif self.text_units == "landmarks_sparse":
+                side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}_processed.pt'.format(idx)))[:,
+                            :,
+                            0:2]
+                # from matplotlib import pyplot as plt
+                # test = side_info + torch.normal(0, self.landmarkNoise, side_info.shape)
+                # test = test.cpu().detach().numpy()
+                # plt.scatter(test[0, :, 0], test[0, :, 1])
+                # plt.show()
+                side_infoY = torch.sum(torch.square(side_info[:, 33] - side_info[:, 29]), axis=1)
+                side_infoX = torch.sum(torch.square(side_info[:, 31] - side_info[:, 27]), axis=1)
+                side_info = torch.cat([torch.unsqueeze(side_infoY, 1), torch.unsqueeze(side_infoX, 1)], axis=1)
+                shape = [int(side_info.shape[0]), int(side_info.shape[1])]
+                # side_info = side_info.view(shape[0], shape[1])
+                if self.fixed_length:
+                    lm_padding_at_start = int(np.floor(padding_at_start / 666.67))
+                    lm_padding_at_end = int(music_len / 16000) * 24 - lm_padding_at_start - shape[0]
+                    # print(int(music_len/16000)*24, shape[0], lm_padding_at_start, lm_padding_at_end)
+                    side_info_padded = np.pad(array=side_info.numpy(),
+                                              pad_width=((lm_padding_at_start, lm_padding_at_end), (0, 0)),
+                                              mode='constant', constant_values=0)
+                    side_info = torch.from_numpy(side_info_padded).type(torch.float32)
             else:
                 side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}.pt'.format(idx)))
             if self.space_token_only:
