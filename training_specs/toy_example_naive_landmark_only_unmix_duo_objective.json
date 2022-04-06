@@ -7,7 +7,7 @@
   "obejective_fn": "duo",
   "pre_train_location": "lst_landmark_unmix_only_toy_NUS_ONLY_DUO_objective",
   "seed": 0,
-  "batch-size": 16,
+  "batch-size": 8,
   "lr": 0.001,
   "weight_decay": 0,
   "patience": 50,
