@@ -976,7 +976,7 @@ class OpenUnmixWithLandmarks4(_Model):
 
         self.bn3 = BatchNorm1d(self.nb_output_bins*nb_channels)
         self.fc2L = Linear(
-            in_features=hidden_size * 2 + landmarkCount * 2,
+            in_features=hidden_size * 2,
             out_features=hidden_size,
             bias=True
         )
