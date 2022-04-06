@@ -520,15 +520,15 @@ class OpenUnmixWithLandmarks2(_Model):
         self.landmarks_lstm = LSTM(
             input_size=landmarkCount*2,
             hidden_size=landmarkCount*2,
-            num_layers=nb_layers,
+            num_layers=1,
             bidirectional=not unidirectional,
             batch_first=False,
-            dropout=0.4,
+            dropout=0,
         )
 
 
         self.bn1 = BatchNorm1d(hidden_size)
-        # self.bn_landmarks = BatchNorm1d(64)
+        self.bn_landmarks = BatchNorm1d(landmarkCount*4)
 
         if unidirectional:
             lstm_hidden_size = hidden_size
@@ -638,8 +638,11 @@ class OpenUnmixWithLandmarks2(_Model):
         # landmarks = [new_T, Batch, L*2]
         context = landmarks.permute((2, 0, 1))
         context,_ = self.landmarks_lstm(context)
+        context = context.reshape(-1, 4)
         context = torch.tanh(context)
-
+        context = self.bn_landmarks(context)
+        context = context.reshape(nb_frames, nb_samples, 4)
+        context = torch.tanh(context)
 
         x = torch.cat((context, x), dim=2)
 
