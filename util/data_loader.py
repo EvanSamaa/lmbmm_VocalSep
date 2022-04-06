@@ -414,7 +414,7 @@ class NUSMusicTrain(torch.utils.data.Dataset):
                     # print(int(music_len/16000)*24, shape[0], lm_padding_at_start, lm_padding_at_end)
                     side_info_padded = np.pad(array=side_info.numpy(),
                                               pad_width=((lm_padding_at_start, lm_padding_at_end), (0, 0)),
-                                              mode='constant', constant_values=0)
+                                              mode='replicate')
                     side_info = torch.from_numpy(side_info_padded).type(torch.float32)
 
             else:
@@ -563,7 +563,7 @@ class NUSMusicTest(torch.utils.data.Dataset):
                     # print(int(music_len/16000)*24, shape[0], lm_padding_at_start, lm_padding_at_end)
                     side_info_padded = np.pad(array=side_info.numpy(),
                                               pad_width=((lm_padding_at_start, lm_padding_at_end), (0, 0)),
-                                              mode='constant', constant_values=0)
+                                              mode='replicate')
                     side_info = torch.from_numpy(side_info_padded).type(torch.float32)
             else:
                 side_info = torch.load(os.path.join(self.path_to_text_sequences, '{}.pt'.format(idx)))
