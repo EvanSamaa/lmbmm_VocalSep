@@ -190,6 +190,11 @@ def train_model(specs, model):
             best_epoch = 0
         except:
             print("model loading unsuccessful")
+            t = tqdm.trange(1, specs["epochs"] + 1)
+            train_losses = []
+            valid_losses = []
+            train_times = []
+            best_epoch = 0
 
     # else start from 0
     else:
