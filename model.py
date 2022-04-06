@@ -1263,8 +1263,7 @@ class OpenUnmixWithLandmarks5(_Model):
         x = torch.cat([x, lstm_out[0]], -1)
 
         # first dense stage + batch norm
-        xL = self.fc2L(x.reshape(-1, x.shape[-1]))
-        predLM = self.bn2L(xL)
+        predLM = self.fc2L(x.reshape(-1, x.shape[-1]))
         predLM = predLM.reshape(nb_frames, nb_samples, self.landmarkCount*2)
         predLM = torch.permute(predLM, [1, 0, 2])
         x = self.fc2(x.reshape(-1, x.shape[-1]))
