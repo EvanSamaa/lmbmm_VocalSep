@@ -4,7 +4,7 @@
   "n_hop": 256,
   "name": "sparse_landmark_unmix_only_toy_NUS_ONLY",
   "dataset": "NUS_landmark_sparse",
-  "obejective_fn": "duo",
+  "obejective_fn": "separation",
   "pre_train_location": "sparse_landmark_unmix_only_toy_NUS_ONLY",
   "seed": 0,
   "batch-size": 16,
