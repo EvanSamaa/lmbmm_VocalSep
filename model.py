@@ -1984,8 +1984,6 @@ class InformedOpenUnmix3NA2(_Model):
         x = F.relu(x) * mix
 
         return x
-
-
 class LandmarkInformedOpenUnmix3(_Model):
     """
     Open Unmix with an additional text encoder and attention mechanism
