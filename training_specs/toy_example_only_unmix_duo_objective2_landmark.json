@@ -1,0 +1,17 @@
+{
+  "sample_rate": 16000,
+  "n_fft": 512,
+  "n_hop": 256,
+  "name": "toy_example_only_unmix_duo_objective_2landmarks",
+  "dataset": "NUS_landmark_sparse",
+  "obejective_fn": "duo",
+  "pre_train_location": "toy_example_only_unmix_duo_objective_2landmarks",
+  "seed": 0,
+  "batch-size": 2,
+  "lr": 0.001,
+  "weight_decay": 0.1,
+  "patience": 50,
+  "lr-decay-patience": 80,
+  "lr-decay-gamma": 0.3,
+  "epochs": 1000
+}
