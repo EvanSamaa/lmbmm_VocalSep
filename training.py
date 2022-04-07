@@ -271,11 +271,11 @@ if __name__ == "__main__":
     # train_model(specs, model_to_train)
 
     # proposed model 1
-    # with open("training_specs/toy_example_naive_landmark_only_unmix.json") as f:
-    #     specs = json.load(f)
-    # # input_specs
-    # model_to_train = model.OpenUnmixWithLandmarks(sample_rate=specs["sample_rate"], landmarkCount=38)
-    # train_model(specs, model_to_train)
+    with open("training_specs/toy_example_naive_landmark_only_unmix.json") as f:
+        specs = json.load(f)
+    # input_specs
+    model_to_train = model.OpenUnmixWithLandmarks(sample_rate=specs["sample_rate"], landmarkCount=38)
+    train_model(specs, model_to_train)
 
     # proposed model 2
     # with open("training_specs/toy_example_lstm_landmark_only_unmix.json") as f:
@@ -292,11 +292,11 @@ if __name__ == "__main__":
     # train_model(specs, model_to_train)
 
     # proposed model 4
-    # with open("training_specs/toy_example_only_unmix_duo_objective_shallowmodel.json") as f:
-    #     specs = json.load(f)
-    # # input_specs
-    # model_to_train = model.OpenUnmixWithLandmarks5(sample_rate=specs["sample_rate"], landmarkCount=38)
-    # train_model(specs, model_to_train)
+    with open("training_specs/toy_example_only_unmix_duo_objective_shallowmodel.json") as f:
+        specs = json.load(f)
+    # input_specs
+    model_to_train = model.OpenUnmixWithLandmarks5(sample_rate=specs["sample_rate"], landmarkCount=38)
+    train_model(specs, model_to_train)
 
     # proposed model 4
     # with open("training_specs/toy_example_fc_landmark_only_unmix.json") as f:
@@ -312,17 +312,17 @@ if __name__ == "__main__":
     # model_to_train = model.OpenUnmixWithLandmarks(sample_rate=specs["sample_rate"], landmarkCount=1)
     # train_model(specs, model_to_train)
 
-    # proposed model 7
-    with open("training_specs/toy_example_only_unmix_duo_objective2_landmark.json") as f:
-        specs = json.load(f)
-    # input_specs
-    model_to_train = model.OpenUnmixWithLandmarks5(sample_rate=specs["sample_rate"], landmarkCount=1)
-    train_model(specs, model_to_train)
-
-    # proposed model 6
-    with open("training_specs/toy_example_2_landmark_only_unmix_duo_objective.json") as f:
-        specs = json.load(f)
-    # input_specs
-    model_to_train = model.OpenUnmixWithLandmarks3(sample_rate=specs["sample_rate"], landmarkCount=1)
-    train_model(specs, model_to_train)
+    # # proposed model 7
+    # with open("training_specs/toy_example_only_unmix_duo_objective2_landmark.json") as f:
+    #     specs = json.load(f)
+    # # input_specs
+    # model_to_train = model.OpenUnmixWithLandmarks5(sample_rate=specs["sample_rate"], landmarkCount=1)
+    # train_model(specs, model_to_train)
+    #
+    # # proposed model 6
+    # with open("training_specs/toy_example_2_landmark_only_unmix_duo_objective.json") as f:
+    #     specs = json.load(f)
+    # # input_specs
+    # model_to_train = model.OpenUnmixWithLandmarks3(sample_rate=specs["sample_rate"], landmarkCount=1)
+    # train_model(specs, model_to_train)
 

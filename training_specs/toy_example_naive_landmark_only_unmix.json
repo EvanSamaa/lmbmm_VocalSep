@@ -7,10 +7,10 @@
   "obejective_fn": "separation",
   "pre_train_location": "naive_landmark_unmix_only_toy_NUS_ONLY",
   "seed": 0,
-  "batch-size": 16,
+  "batch-size": 2,
   "lr": 0.001,
-  "weight_decay": 0,
-  "patience": 50,
+  "weight_decay": 0.1,
+  "patience": 20,
   "lr-decay-patience": 80,
   "lr-decay-gamma": 0.3,
   "epochs": 1000

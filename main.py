@@ -10,8 +10,8 @@ if __name__ == "__main__":
     # du.analyze_timit()
     # du.prepare_timit()
     # du.prepare_NUS()
-    # du.analyze_NUS()
-    du.prepare_instrumental()
+    du.analyze_NUS()
+    # du.prepare_instrumental()
 
     # data_set_root = "F:/MASC/lmbmm_vocal_sep_data/NUS/train"
     # path_to_text_sequences = "F:/MASC/lmbmm_vocal_sep_data/NUS/train_landmarks_raw"

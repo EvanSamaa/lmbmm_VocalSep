@@ -943,7 +943,6 @@ def analyze_timit():
     # plt.show()
     sns.displot(segment_lengths_train, bins=50, kde=True)
     plt.show()
-
 def prepare_NUS_landmarks():
     with open('./location_dict.json') as f:
         dataset_path_dict = json.load(f)
@@ -998,8 +997,6 @@ def prepare_NUS_landmarks():
         # plt.scatter(landmark_array_t[:,0], landmark_array_t[:, 1])
         # plt.show()
         print(i, "train")
-
-
 def prepare_instrumental():
     with open('location_dict.json') as f:
         dataset_path_dict = json.load(f)
