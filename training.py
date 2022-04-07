@@ -320,7 +320,7 @@ if __name__ == "__main__":
     # train_model(specs, model_to_train)
 
     # proposed model 7
-    with open("training_specs/toy_example_only_unmix_duo_objective_2landmarks.json") as f:
+    with open("training_specs/toy_example_only_unmix_duo_objective2_landmark.json") as f:
         specs = json.load(f)
     # input_specs
     model_to_train = model.OpenUnmixWithLandmarks5(sample_rate=specs["sample_rate"], landmarkCount=1)
