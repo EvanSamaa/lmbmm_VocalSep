@@ -10,6 +10,7 @@ from pathlib import Path
 from util.data_loader import *
 import museval
 import pandas as pd
+import torch.nn.functional as F
 
 def istft(X, rate=16000, n_fft=4096, n_hopsize=1024):
     t, audio = sisft(
@@ -208,8 +209,8 @@ def separate(
     V = []
     source_names = []
     with torch.no_grad():
+        # out = model((mix, text))
         out = model((mix, text))
-        # out = model((mix, text))[0]
         # if type(out) == list:
         #     out = out[0]
         Vj = out.cpu().detach().numpy()
@@ -294,7 +295,7 @@ def compute_BSS_Metrics():
         elif specs["dataset"] == "NUS":
             valid_dataset = NUSMusicTest(None, fixed_length=True, size=500, mono=True, random_song=False)
         elif specs["dataset"] == "NUS_landmark":
-            valid_dataset = NUSMusicTest("landmarks", fixed_length=True, mono=True, landmarkNoise=0, random_song=False)
+            valid_dataset = NUSMusicTest("landmarks", fixed_length=True, mono=True, landmarkNoise=0, random_song=True)
         elif specs["dataset"] == "NUS_landmark_sparse":
             valid_dataset = NUSMusicTest("landmarks_sparse", fixed_length=True, mono=True, landmarkNoise=0)
         results = museval.EvalStore()
@@ -325,9 +326,104 @@ def compute_BSS_Metrics():
         method.add_evalstore(results, specs["name"])
         method.save('trained_models/modelEval/{}.pkl'.format(specs["name"]))
         # silent_frames_results = silent_frames_results.append(silent_frames_scores, ignore_index=True)
+def compute_testing_loss():
+    with open("training_specs/toy_example_unmix.json") as f:
+        specs_unmix = json.load(f)
+    unmix = model_classes.OpenUnmix(sample_rate=specs_unmix["sample_rate"], n_fft=specs_unmix["n_fft"],
+                            n_hop=specs_unmix["n_hop"], input_is_spectrogram=False)
+    with open("training_specs/toy_example_naive_landmark_only_unmix.json") as f:
+        specs_unmix_AI = json.load(f)
+    unmix_AI = model_classes.OpenUnmixWithLandmarks(sample_rate=specs_unmix_AI["sample_rate"], landmarkCount=38)
+    with open("training_specs/toy_example_naive_landmark_only_unmix_duo_objective.json") as f:
+        specs_unmiM_AIO = json.load(f)
+    unmiM_AIO = model_classes.OpenUnmixWithLandmarks3(sample_rate=specs_unmiM_AIO["sample_rate"], landmarkCount=38)
+    with open("training_specs/toy_example_only_unmix_duo_objective_shallowmodel.json") as f:
+        specs_unmiM_AO = json.load(f)
+    unmiM_AO = model_classes.OpenUnmixWithLandmarks5(sample_rate=specs_unmiM_AO["sample_rate"], landmarkCount=38)
+
+    specss = [specs_unmix, specs_unmix_AI, specs_unmiM_AO, specs_unmiM_AIO]
+    models = [unmix, unmix_AI, unmiM_AO, unmiM_AIO]
+    for i in range(2, 4):
+        model = models[i]
+        specs = specss[i]
+        # location = spec["pre_train_location"]
+        if specs["pre_train_location"] != "":
+            try:
+                model_path = Path(os.path.join('trained_models/', specs["pre_train_location"])).expanduser()
+                with open(Path(os.path.join(model_path, "vocal" + '.json')), 'r') as stream:
+                    results = json.load(stream)
+
+                target_model_path = Path(model_path, "vocal" + ".chkpnt")
+                use_cuda = torch.cuda.is_available()
+                device = torch.device("cuda" if use_cuda else "cpu")
+                checkpoint = torch.load(target_model_path, device)
+                print("loaded checkpoint")
+                model.load_state_dict(checkpoint['state_dict'])
+                print("loaded model")
+            except:
+                print("model loading unsuccessful")
+        # model is now loaded, so here loads the dataset
+        if specs["dataset"] == "TIMIT":
+            valid_dataset = TIMITMusicTest(None, fixed_length=True, size=500, mono=True)
+        elif specs["dataset"] == "NUS":
+            valid_dataset = NUSMusicTest(None, fixed_length=True, size=500, mono=True, random_song=False)
+        elif specs["dataset"] == "NUS_landmark":
+            valid_dataset = NUSMusicTest("landmarks", fixed_length=True, mono=True, landmarkNoise=0, random_song=True)
+        elif specs["dataset"] == "NUS_landmark_sparse":
+            valid_dataset = NUSMusicTest("landmarks_sparse", fixed_length=True, mono=True, landmarkNoise=0)
+        valid_sampler = torch.utils.data.DataLoader(
+            valid_dataset, batch_size=1, shuffle=True, drop_last=True,
+        )
+        results = []
+        model.eval()
+        model.stft.center = True
+        with torch.no_grad():
+            for idx in tqdm.tqdm(range(len(valid_dataset))):
+                try:
+                    data = valid_dataset[idx]
+                    x = torch.unsqueeze(data[0], axis=0)  # mix
+                    y = torch.unsqueeze(data[1], axis=0)  # vocals
+                    z = torch.unsqueeze(data[2], axis=0)  # text
+                    x, y, z = x.to(device), y.to(device), z.to(device)
+                    # if args.alignment_from:
+                    #     inputs = (x, z, data[3].to(device))  # add attention weight to input
+                    # else:
+                    inputs = (x, z)
+                    Y_hat, L_hat = model(inputs)
+                    loss_fn2 = torch.nn.MSELoss()
+                    L = z.permute((0, 2, 1))
+                    # landmarks = [Batch, L*2, new_T]
+                    L = F.interpolate(L, L_hat.shape[1])
+                    # landmarks = [new_T, Batch, L*2]
+                    L = L.permute((0, 2, 1))
+
+                    Y = model.transform(y)
+                    loss_fn = torch.nn.L1Loss(
+                        reduction='sum')  # in sms project, the loss is defined before looping over epochs
+                    loss = loss_fn(Y_hat, Y)
+                    results.append(loss_fn2(L_hat, L).numpy())
+                except:
+                    print("skipped {}".format(idx))
+        np.save('trained_models/modelEval/MSE_{}.npy'.format(specs["name"]), np.array(results))
+        # method = museval.MethodStore()
+        # method.add_evalstore(results, specs["name"])
+        # method.save('trained_models/modelEval/{}.pkl'.format(specs["name"]))
+        # silent_frames_results = silent_frames_results.append(silent_frames_scores, ignore_index=True)
 if __name__ == "__main__":
     compute_BSS_Metrics()
     A[2]
+    # m1 = np.load("trained_models/modelEval/MSE_lst_landmark_unmix_only_toy_NUS_ONLY_DUO_objective.npy")
+    # m2 = np.load("trained_models/modelEval/MSE_lunmix_only_toy_NUS_ONLY_DUO_objective_shallow_model.npy")
+    # plt.boxplot([m1, m2], labels=["unmix-AIO", "unmix-AO"])
+    # plt.ylabel("MSE loss with target landmark")
+    #
+    # # show plot
+    # plt.show()
+    # print(m1.mean())
+    # print(m2.mean())
+    #
+    # # compute_testing_loss()
+    # A[2]
     evalPaths = "trained_models/modelEval/{}.pkl"
     with open("training_specs/toy_example_unmix.json") as f:
         specs_unmix = json.load(f)
@@ -345,6 +441,8 @@ if __name__ == "__main__":
     specss = [specs_unmix, specs_unmix_AI, specs_unmiM_AO, specs_unmiM_AIO]
     models = [unmix, unmix_AI, unmiM_AO, unmiM_AIO]
     names = ["unmix", "unmix_AI", "unmiM_AO", "unmiM_AIO"]
+    out = []
+    out_names = []
     for i in range(0, len(specss)):
         # np.random.seed(0)
         # torch.seed(0)
@@ -352,11 +450,18 @@ if __name__ == "__main__":
         currentdf: pd.DataFrame = pd.read_pickle(current_path)
         currentdf = currentdf[currentdf["target"] == "vocals"]
         currentdf = currentdf[currentdf['score'].notna()]
+        arr = currentdf[currentdf["metric"]=="SAR"]["score"].array
         # print(currentdf.keys())
+        print(arr.shape)
         # print(currentdf.head())
-        print(names[i])
-        print(currentdf.groupby(["metric"]).mean())
+        out_names.append(names[i])
+        out.append(arr)
+        print(names[i], "mean\n", currentdf.groupby(["metric"]).mean())
+        print(names[i], "var\n", currentdf.groupby(["metric"]).var())
         # A[2]
+    plt.ylabel("SAR")
+    plt.boxplot(out, labels=out_names)
+    plt.show()
 
 
 
