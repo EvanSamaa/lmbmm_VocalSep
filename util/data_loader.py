@@ -443,6 +443,7 @@ class NUSMusicTest(torch.utils.data.Dataset):
                  space_token_only=False,
                  mono=False,
                  size=1344,
+                 random_song=True,
                  landmarkNoise:float=0):
 
         super(NUSMusicTest).__init__()
@@ -450,6 +451,7 @@ class NUSMusicTest(torch.utils.data.Dataset):
         # set to true if all files should have fixed length of 8.5 s (=> much silence in true vocals)
         self.fixed_length = fixed_length
         self.text_units = text_units
+        self.random_song = random_song
         self.space_token_only = space_token_only
         self.mono = mono
         self.data_set_size = size
@@ -500,6 +502,8 @@ class NUSMusicTest(torch.utils.data.Dataset):
             speech = speech.tile((2,1))
         # randomly choose a music file from list and load it
         music_idx = torch.randint(low=0, high=len(self.list_of_music_files), size=(1,))
+        if self.random_song == False:
+            music_idx[0] = idx
         music_file = self.list_of_music_files[music_idx]
         music = torch.load(os.path.join(self.data_set_root, music_file))
 
@@ -579,6 +583,8 @@ class NUSMusicTest(torch.utils.data.Dataset):
                 side_info[-1] = 3
 
         target_snr = torch.rand(size=(1,)) * (-8)
+        if self.random_song == False:
+            target_snr = 0
         mix, speech, music = self.mix_with_snr(target_snr, torch.from_numpy(speech_padded).type(torch.float32),
                                                music, padding_at_start, speech_len)
 

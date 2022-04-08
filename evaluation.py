@@ -1,5 +1,5 @@
 import torch
-import model
+import model as model_classes
 import json
 from matplotlib import pyplot as plt
 import numpy as np
@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 from util.data_loader import *
 import museval
+import pandas as pd
 
 def istft(X, rate=16000, n_fft=4096, n_hopsize=1024):
     t, audio = sisft(
@@ -208,8 +209,9 @@ def separate(
     source_names = []
     with torch.no_grad():
         out = model((mix, text))
-        if type(out) == list:
-            out = out[0]
+        # out = model((mix, text))[0]
+        # if type(out) == list:
+        #     out = out[0]
         Vj = out.cpu().detach().numpy()
         # output is nb_frames, nb_samples, nb_channels, nb_bins
         V.append(Vj[:, 0, ...])  # remove sample dim
@@ -249,23 +251,25 @@ def plotLandmarks():
     for i, label in enumerate(annotations):
         plt.annotate(label, (X[i], Y[i]))
     plt.show()
-if __name__ == "__main__":
+
+def compute_BSS_Metrics():
     with open("training_specs/toy_example_unmix.json") as f:
         specs_unmix = json.load(f)
-    unmix = model.OpenUnmix(sample_rate=specs_unmix["sample_rate"], n_fft=specs_unmix["n_fft"], n_hop=specs_unmix["n_hop"], input_is_spectrogram=False)
+    unmix = model_classes.OpenUnmix(sample_rate=specs_unmix["sample_rate"], n_fft=specs_unmix["n_fft"],
+                            n_hop=specs_unmix["n_hop"], input_is_spectrogram=False)
     with open("training_specs/toy_example_naive_landmark_only_unmix.json") as f:
         specs_unmix_AI = json.load(f)
-    unmix_AI = model.OpenUnmixWithLandmarks(sample_rate=specs_unmix_AI["sample_rate"], landmarkCount=38)
+    unmix_AI = model_classes.OpenUnmixWithLandmarks(sample_rate=specs_unmix_AI["sample_rate"], landmarkCount=38)
     with open("training_specs/toy_example_naive_landmark_only_unmix_duo_objective.json") as f:
         specs_unmiM_AIO = json.load(f)
-    unmiM_AIO = model.OpenUnmixWithLandmarks3(sample_rate=specs_unmiM_AIO["sample_rate"], landmarkCount=38)
+    unmiM_AIO = model_classes.OpenUnmixWithLandmarks3(sample_rate=specs_unmiM_AIO["sample_rate"], landmarkCount=38)
     with open("training_specs/toy_example_only_unmix_duo_objective_shallowmodel.json") as f:
         specs_unmiM_AO = json.load(f)
-    unmiM_AO = model.OpenUnmixWithLandmarks5(sample_rate=specs_unmiM_AO["sample_rate"], landmarkCount=38)
+    unmiM_AO = model_classes.OpenUnmixWithLandmarks5(sample_rate=specs_unmiM_AO["sample_rate"], landmarkCount=38)
 
     specss = [specs_unmix, specs_unmix_AI, specs_unmiM_AO, specs_unmiM_AIO]
     models = [unmix, unmix_AI, unmiM_AO, unmiM_AIO]
-    for i in range(1, len(models)):
+    for i in range(0, 2):
         model = models[i]
         specs = specss[i]
         # location = spec["pre_train_location"]
@@ -288,9 +292,9 @@ if __name__ == "__main__":
         if specs["dataset"] == "TIMIT":
             valid_dataset = TIMITMusicTest(None, fixed_length=True, size=500, mono=True)
         elif specs["dataset"] == "NUS":
-            valid_dataset = NUSMusicTest(None, fixed_length=True, size=500, mono=True)
+            valid_dataset = NUSMusicTest(None, fixed_length=True, size=500, mono=True, random_song=False)
         elif specs["dataset"] == "NUS_landmark":
-            valid_dataset = NUSMusicTest("landmarks", fixed_length=True, mono=True, landmarkNoise=0)
+            valid_dataset = NUSMusicTest("landmarks", fixed_length=True, mono=True, landmarkNoise=0, random_song=False)
         elif specs["dataset"] == "NUS_landmark_sparse":
             valid_dataset = NUSMusicTest("landmarks_sparse", fixed_length=True, mono=True, landmarkNoise=0)
         results = museval.EvalStore()
@@ -301,25 +305,58 @@ if __name__ == "__main__":
                 # track[1].shape = torch.Size([2, 192000])
                 # track[2].shape = torch.Size([288, 76])
                 bss_eval_scores = separate_and_evaluate2(
-                                                       track,
-                                                       targets=["vocals","instrumental"],
-                                                       model=model,
-                                                       niter=None,
-                                                       alpha=None,
-                                                       softmask=None,
-                                                       output_dir=None,
-                                                       eval_dir=None,
-                                                       device=device,
-                                                       samplerate=16000,
-                                                        index=idx
-                                                       )
+                    track,
+                    targets=["vocals", "instrumental"],
+                    model=model,
+                    niter=None,
+                    alpha=None,
+                    softmask=None,
+                    output_dir=None,
+                    eval_dir=None,
+                    device=device,
+                    samplerate=16000,
+                    index=idx
+                )
+                print(bss_eval_scores)
                 results.add_track(bss_eval_scores)
             except:
                 print("failed at track {}".format(idx))
         method = museval.MethodStore()
         method.add_evalstore(results, specs["name"])
         method.save('trained_models/modelEval/{}.pkl'.format(specs["name"]))
-            # silent_frames_results = silent_frames_results.append(silent_frames_scores, ignore_index=True)
+        # silent_frames_results = silent_frames_results.append(silent_frames_scores, ignore_index=True)
+if __name__ == "__main__":
+    compute_BSS_Metrics()
+    A[2]
+    evalPaths = "trained_models/modelEval/{}.pkl"
+    with open("training_specs/toy_example_unmix.json") as f:
+        specs_unmix = json.load(f)
+    unmix = model_classes.OpenUnmix(sample_rate=specs_unmix["sample_rate"], n_fft=specs_unmix["n_fft"],
+                            n_hop=specs_unmix["n_hop"], input_is_spectrogram=False)
+    with open("training_specs/toy_example_naive_landmark_only_unmix.json") as f:
+        specs_unmix_AI = json.load(f)
+    unmix_AI = model_classes.OpenUnmixWithLandmarks(sample_rate=specs_unmix_AI["sample_rate"], landmarkCount=38)
+    with open("training_specs/toy_example_naive_landmark_only_unmix_duo_objective.json") as f:
+        specs_unmiM_AIO = json.load(f)
+    unmiM_AIO = model_classes.OpenUnmixWithLandmarks3(sample_rate=specs_unmiM_AIO["sample_rate"], landmarkCount=38)
+    with open("training_specs/toy_example_only_unmix_duo_objective_shallowmodel.json") as f:
+        specs_unmiM_AO = json.load(f)
+    unmiM_AO = model_classes.OpenUnmixWithLandmarks5(sample_rate=specs_unmiM_AO["sample_rate"], landmarkCount=38)
+    specss = [specs_unmix, specs_unmix_AI, specs_unmiM_AO, specs_unmiM_AIO]
+    models = [unmix, unmix_AI, unmiM_AO, unmiM_AIO]
+    names = ["unmix", "unmix_AI", "unmiM_AO", "unmiM_AIO"]
+    for i in range(0, len(specss)):
+        # np.random.seed(0)
+        # torch.seed(0)
+        current_path = evalPaths.format(specss[i]["name"])
+        currentdf: pd.DataFrame = pd.read_pickle(current_path)
+        currentdf = currentdf[currentdf["target"] == "vocals"]
+        currentdf = currentdf[currentdf['score'].notna()]
+        # print(currentdf.keys())
+        # print(currentdf.head())
+        print(names[i])
+        print(currentdf.groupby(["metric"]).mean())
+        # A[2]
 
 
 
