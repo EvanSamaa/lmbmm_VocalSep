@@ -467,7 +467,7 @@ def plot_output_spectrogram():
         with torch.no_grad():
             for idx in tqdm.tqdm(range(len(valid_dataset))):
                 # try:
-                idx = idx + 80
+                idx = idx
                 data = valid_dataset[idx]
                 x = data[0]  # mix
                 y = data[1]  # vocals
@@ -509,7 +509,6 @@ def plot_output_spectrogram():
 
 if __name__ == "__main__":
     plot_output_spectrogram()
-    A[2]
     # m1 = np.load("trained_models/modelEval/MSE_lst_landmark_unmix_only_toy_NUS_ONLY_DUO_objective.npy")
     # m2 = np.load("trained_models/modelEval/MSE_lunmix_only_toy_NUS_ONLY_DUO_objective_shallow_model.npy")
     # plt.boxplot([m1, m2], labels=["unmix-AIO", "unmix-AO"])
@@ -554,12 +553,9 @@ if __name__ == "__main__":
         # print(currentdf.head())
         out_names.append(names[i])
         out.append(arr)
-        print(names[i], "mean\n", currentdf.groupby(["metric"]).max())
+        print(names[i], "mean\n", currentdf.groupby(["metric"]).mean())
         # print(names[i], "var\n", currentdf.groupby(["metric"]).std())
-    A[2]
-    print(out[0].shape)
-    print(out[2].shape)
-    print(out[3].shape)
+
     print(out[0].mean(), out[0].std())
     print(out[2].mean(), out[2].std())
     print(out[3].mean(), out[3].std())
