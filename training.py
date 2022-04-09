@@ -264,14 +264,14 @@ def train_model(specs, model):
 if __name__ == "__main__":
 
     # baseline
-    # with open("training_specs/toy_example_unmix.json") as f:
+    # with open("training_specs/openUnmix.json") as f:
     #     specs = json.load(f)
     # # input_specs
     # model_to_train = model.OpenUnmix(sample_rate=specs["sample_rate"], n_fft=specs["n_fft"], n_hop=specs["n_hop"], input_is_spectrogram=False)
     # train_model(specs, model_to_train)
 
     # proposed model 1
-    with open("training_specs/toy_example_naive_landmark_only_unmix.json") as f:
+    with open("training_specs/unmix_AI.json") as f:
         specs = json.load(f)
     # input_specs
     model_to_train = model.OpenUnmixWithLandmarks(sample_rate=specs["sample_rate"], landmarkCount=38)
@@ -285,14 +285,14 @@ if __name__ == "__main__":
     # train_model(specs, model_to_train)
 
     # proposed model 3
-    with open("training_specs/toy_example_naive_landmark_only_unmix_duo_objective.json") as f:
+    with open("training_specs/unmix_AIO.json") as f:
         specs = json.load(f)
     # input_specs
     model_to_train = model.OpenUnmixWithLandmarks3(sample_rate=specs["sample_rate"], landmarkCount=38)
     train_model(specs, model_to_train)
 
     # proposed model 4
-    with open("training_specs/toy_example_only_unmix_duo_objective_shallowmodel.json") as f:
+    with open("training_specs/unmix_AO.json") as f:
         specs = json.load(f)
     # input_specs
     model_to_train = model.OpenUnmixWithLandmarks5(sample_rate=specs["sample_rate"], landmarkCount=38)

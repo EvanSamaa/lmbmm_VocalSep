@@ -514,6 +514,8 @@ class NUSMusicTest(torch.utils.data.Dataset):
             # print(music_len, music_idx, speech_len, idx)
             padding_at_start = int(
                 (torch.randint(0, int(np.floor((music_len - speech_len) / 16000 * 24)), size=(1,))) /24*16000)
+            if self.random_song == False:
+                padding_at_start = 0
             padding_at_end = music_len - padding_at_start - speech_len
             # print(music_len, speech_len, padding_at_start, padding_at_end)
             speech_padded = np.pad(array=speech.numpy(), pad_width=((0, 0), (padding_at_start, padding_at_end)),
@@ -584,7 +586,7 @@ class NUSMusicTest(torch.utils.data.Dataset):
 
         target_snr = torch.rand(size=(1,)) * (-8)
         if self.random_song == False:
-            target_snr = 0
+            target_snr = 5
         mix, speech, music = self.mix_with_snr(target_snr, torch.from_numpy(speech_padded).type(torch.float32),
                                                music, padding_at_start, speech_len)
 

@@ -11,6 +11,7 @@ from util.data_loader import *
 import museval
 import pandas as pd
 import torch.nn.functional as F
+import scipy.stats as stats
 
 def istft(X, rate=16000, n_fft=4096, n_hopsize=1024):
     t, audio = sisft(
@@ -115,6 +116,7 @@ def separate_and_evaluate2(
     device='cpu',
     args=None,
     index=0,
+    num_output=1
 ):
     mix = track[0]
     true_vocals = track[1]
@@ -135,6 +137,7 @@ def separate_and_evaluate2(
         softmask=softmask,
         device=device,
         args=args,
+        num_output=num_output
     )
 
     # if output_dir:
@@ -156,7 +159,7 @@ def separate(
     targets,
     model,
     niter=1, softmask=False, alpha=1.0,
-    residual_model=False, device='cpu', args=None):
+    residual_model=False, device='cpu', args=None, num_output=1):
     """
     Performing the separation on audio input
 
@@ -211,8 +214,8 @@ def separate(
     with torch.no_grad():
         # out = model((mix, text))
         out = model((mix, text))
-        # if type(out) == list:
-        #     out = out[0]
+        if num_output == 2:
+            out = out[0]
         Vj = out.cpu().detach().numpy()
         # output is nb_frames, nb_samples, nb_channels, nb_bins
         V.append(Vj[:, 0, ...])  # remove sample dim
@@ -254,17 +257,17 @@ def plotLandmarks():
     plt.show()
 
 def compute_BSS_Metrics():
-    with open("training_specs/toy_example_unmix.json") as f:
+    with open("training_specs/openUnmix.json") as f:
         specs_unmix = json.load(f)
     unmix = model_classes.OpenUnmix(sample_rate=specs_unmix["sample_rate"], n_fft=specs_unmix["n_fft"],
                             n_hop=specs_unmix["n_hop"], input_is_spectrogram=False)
-    with open("training_specs/toy_example_naive_landmark_only_unmix.json") as f:
+    with open("training_specs/unmix_AI.json") as f:
         specs_unmix_AI = json.load(f)
     unmix_AI = model_classes.OpenUnmixWithLandmarks(sample_rate=specs_unmix_AI["sample_rate"], landmarkCount=38)
-    with open("training_specs/toy_example_naive_landmark_only_unmix_duo_objective.json") as f:
+    with open("training_specs/unmix_AIO.json") as f:
         specs_unmiM_AIO = json.load(f)
     unmiM_AIO = model_classes.OpenUnmixWithLandmarks3(sample_rate=specs_unmiM_AIO["sample_rate"], landmarkCount=38)
-    with open("training_specs/toy_example_only_unmix_duo_objective_shallowmodel.json") as f:
+    with open("training_specs/unmix_AO.json") as f:
         specs_unmiM_AO = json.load(f)
     unmiM_AO = model_classes.OpenUnmixWithLandmarks5(sample_rate=specs_unmiM_AO["sample_rate"], landmarkCount=38)
 
@@ -327,17 +330,17 @@ def compute_BSS_Metrics():
         method.save('trained_models/modelEval/{}.pkl'.format(specs["name"]))
         # silent_frames_results = silent_frames_results.append(silent_frames_scores, ignore_index=True)
 def compute_testing_loss():
-    with open("training_specs/toy_example_unmix.json") as f:
+    with open("training_specs/openUnmix.json") as f:
         specs_unmix = json.load(f)
     unmix = model_classes.OpenUnmix(sample_rate=specs_unmix["sample_rate"], n_fft=specs_unmix["n_fft"],
                             n_hop=specs_unmix["n_hop"], input_is_spectrogram=False)
-    with open("training_specs/toy_example_naive_landmark_only_unmix.json") as f:
+    with open("training_specs/unmix_AI.json") as f:
         specs_unmix_AI = json.load(f)
     unmix_AI = model_classes.OpenUnmixWithLandmarks(sample_rate=specs_unmix_AI["sample_rate"], landmarkCount=38)
-    with open("training_specs/toy_example_naive_landmark_only_unmix_duo_objective.json") as f:
+    with open("training_specs/unmix_AIO.json") as f:
         specs_unmiM_AIO = json.load(f)
     unmiM_AIO = model_classes.OpenUnmixWithLandmarks3(sample_rate=specs_unmiM_AIO["sample_rate"], landmarkCount=38)
-    with open("training_specs/toy_example_only_unmix_duo_objective_shallowmodel.json") as f:
+    with open("training_specs/unmix_AO.json") as f:
         specs_unmiM_AO = json.load(f)
     unmiM_AO = model_classes.OpenUnmixWithLandmarks5(sample_rate=specs_unmiM_AO["sample_rate"], landmarkCount=38)
 
@@ -409,8 +412,103 @@ def compute_testing_loss():
         # method.add_evalstore(results, specs["name"])
         # method.save('trained_models/modelEval/{}.pkl'.format(specs["name"]))
         # silent_frames_results = silent_frames_results.append(silent_frames_scores, ignore_index=True)
+def plot_output_spectrogram():
+    with open("training_specs/openUnmix.json") as f:
+        specs_unmix = json.load(f)
+    unmix = model_classes.OpenUnmix(sample_rate=specs_unmix["sample_rate"], n_fft=specs_unmix["n_fft"],
+                            n_hop=specs_unmix["n_hop"], input_is_spectrogram=False)
+    with open("training_specs/unmix_AI.json") as f:
+        specs_unmix_AI = json.load(f)
+    unmix_AI = model_classes.OpenUnmixWithLandmarks(sample_rate=specs_unmix_AI["sample_rate"], landmarkCount=38)
+    with open("training_specs/unmix_AIO.json") as f:
+        specs_unmiM_AIO = json.load(f)
+    unmiM_AIO = model_classes.OpenUnmixWithLandmarks3(sample_rate=specs_unmiM_AIO["sample_rate"], landmarkCount=38)
+    with open("training_specs/unmix_AO.json") as f:
+        specs_unmiM_AO = json.load(f)
+    unmiM_AO = model_classes.OpenUnmixWithLandmarks5(sample_rate=specs_unmiM_AO["sample_rate"], landmarkCount=38)
+
+    specss = [specs_unmix, specs_unmix_AI, specs_unmiM_AO, specs_unmiM_AIO]
+    models = [unmix, unmix_AI, unmiM_AO, unmiM_AIO]
+    num_out_list = [1, 1, 2, 2]
+    for i in range(0, 1):
+        model = models[i]
+        specs = specss[i]
+        # location = spec["pre_train_location"]
+        if specs["pre_train_location"] != "":
+            try:
+                model_path = Path(os.path.join('trained_models/', specs["pre_train_location"])).expanduser()
+                with open(Path(os.path.join(model_path, "vocal" + '.json')), 'r') as stream:
+                    results = json.load(stream)
+
+                target_model_path = Path(model_path, "vocal" + ".chkpnt")
+                use_cuda = torch.cuda.is_available()
+                device = torch.device("cuda" if use_cuda else "cpu")
+                checkpoint = torch.load(target_model_path, device)
+                print("loaded checkpoint")
+                model.load_state_dict(checkpoint['state_dict'])
+                print("loaded model")
+            except:
+                print("model loading unsuccessful")
+        # model is now loaded, so here loads the dataset
+        if specs["dataset"] == "TIMIT":
+            valid_dataset = TIMITMusicTest(None, fixed_length=True, size=500, mono=True)
+        elif specs["dataset"] == "NUS":
+            valid_dataset = NUSMusicTest(None, fixed_length=True, size=500, mono=True, random_song=False)
+        elif specs["dataset"] == "NUS_landmark":
+            valid_dataset = NUSMusicTest("landmarks", fixed_length=True, mono=True, landmarkNoise=0, random_song=False)
+        elif specs["dataset"] == "NUS_landmark_sparse":
+            valid_dataset = NUSMusicTest("landmarks_sparse", fixed_length=True, mono=True, landmarkNoise=0)
+        valid_sampler = torch.utils.data.DataLoader(
+            valid_dataset, batch_size=1, shuffle=True, drop_last=True,
+        )
+        results = []
+        model.eval()
+        model.stft.center = True
+        with torch.no_grad():
+            for idx in tqdm.tqdm(range(len(valid_dataset))):
+                # try:
+                idx = idx + 80
+                data = valid_dataset[idx]
+                x = data[0]  # mix
+                y = data[1]  # vocals
+                z = data[2]  # text
+                z = torch.unsqueeze(z, 0)
+                x, y, z = x.to(device), y.to(device), z.to(device)
+                # if args.alignment_from:
+                #     inputs = (x, z, data[3].to(device))  # add attention weight to input
+                # else:
+                # print(x.shape)
+                inputs = (x, z)
+                estimates1 = separate(inputs, None, unmix, num_output=num_out_list[0])
+                estimates2 = separate(inputs, None, unmiM_AO, num_output=num_out_list[2])
+                plt.subplot(221)
+                plt.specgram(x[0, :60000], Fs=512, noverlap=256, NFFT=512)
+                plt.title("mixture signal")
+                plt.xlabel('Time')
+                plt.ylabel('Frequency')
+                plt.subplot(222)
+                plt.specgram(y[0, :60000], Fs=512, noverlap=256, NFFT=512)
+                plt.title("Vocal signal")
+                plt.xlabel('Time')
+                plt.ylabel('Frequency')
+                plt.subplot(223)
+                plt.specgram(estimates1["vocals"][0, :60000], Fs=512, noverlap=256, NFFT=512)
+                plt.title("Unmix-AO output")
+                plt.xlabel('Time')
+                plt.ylabel('Frequency')
+                plt.subplot(224)
+                plt.specgram(estimates2["vocals"][0, :60000], Fs=512, noverlap=256, NFFT=512)
+                plt.title("Open unmix")
+                plt.xlabel('Time')
+                plt.ylabel('Frequency')
+                plt.show()
+
+                # except:
+                #     print("cannot load this data lol")
+                # A[2]
+
 if __name__ == "__main__":
-    compute_BSS_Metrics()
+    plot_output_spectrogram()
     A[2]
     # m1 = np.load("trained_models/modelEval/MSE_lst_landmark_unmix_only_toy_NUS_ONLY_DUO_objective.npy")
     # m2 = np.load("trained_models/modelEval/MSE_lunmix_only_toy_NUS_ONLY_DUO_objective_shallow_model.npy")
@@ -425,17 +523,17 @@ if __name__ == "__main__":
     # # compute_testing_loss()
     # A[2]
     evalPaths = "trained_models/modelEval/{}.pkl"
-    with open("training_specs/toy_example_unmix.json") as f:
+    with open("training_specs/openUnmix.json") as f:
         specs_unmix = json.load(f)
     unmix = model_classes.OpenUnmix(sample_rate=specs_unmix["sample_rate"], n_fft=specs_unmix["n_fft"],
                             n_hop=specs_unmix["n_hop"], input_is_spectrogram=False)
-    with open("training_specs/toy_example_naive_landmark_only_unmix.json") as f:
+    with open("training_specs/unmix_AI.json") as f:
         specs_unmix_AI = json.load(f)
     unmix_AI = model_classes.OpenUnmixWithLandmarks(sample_rate=specs_unmix_AI["sample_rate"], landmarkCount=38)
-    with open("training_specs/toy_example_naive_landmark_only_unmix_duo_objective.json") as f:
+    with open("training_specs/unmix_AIO.json") as f:
         specs_unmiM_AIO = json.load(f)
     unmiM_AIO = model_classes.OpenUnmixWithLandmarks3(sample_rate=specs_unmiM_AIO["sample_rate"], landmarkCount=38)
-    with open("training_specs/toy_example_only_unmix_duo_objective_shallowmodel.json") as f:
+    with open("training_specs/unmix_AO.json") as f:
         specs_unmiM_AO = json.load(f)
     unmiM_AO = model_classes.OpenUnmixWithLandmarks5(sample_rate=specs_unmiM_AO["sample_rate"], landmarkCount=38)
     specss = [specs_unmix, specs_unmix_AI, specs_unmiM_AO, specs_unmiM_AIO]
@@ -448,19 +546,28 @@ if __name__ == "__main__":
         # torch.seed(0)
         current_path = evalPaths.format(specss[i]["name"])
         currentdf: pd.DataFrame = pd.read_pickle(current_path)
+        currentdf = currentdf[["target", "score", "metric", "track"]]
         currentdf = currentdf[currentdf["target"] == "vocals"]
         currentdf = currentdf[currentdf['score'].notna()]
-        arr = currentdf[currentdf["metric"]=="SAR"]["score"].array
+        arr = currentdf[currentdf["metric"]=="SDR"]["score"].array
         # print(currentdf.keys())
-        print(arr.shape)
         # print(currentdf.head())
         out_names.append(names[i])
         out.append(arr)
-        print(names[i], "mean\n", currentdf.groupby(["metric"]).mean())
-        print(names[i], "var\n", currentdf.groupby(["metric"]).var())
-        # A[2]
-    plt.ylabel("SAR")
-    plt.boxplot(out, labels=out_names)
+        print(names[i], "mean\n", currentdf.groupby(["metric"]).max())
+        # print(names[i], "var\n", currentdf.groupby(["metric"]).std())
+    A[2]
+    print(out[0].shape)
+    print(out[2].shape)
+    print(out[3].shape)
+    print(out[0].mean(), out[0].std())
+    print(out[2].mean(), out[2].std())
+    print(out[3].mean(), out[3].std())
+    print(stats.ttest_rel(out[0][:1878], out[2], alternative="less"))
+    print(stats.ttest_rel(out[0][:1894], out[3], alternative="less"))
+
+    plt.ylabel("SIR")
+    plt.boxplot([out[0], out[2], out[3] ], labels=[out_names[0], out_names[2], out_names[3]])
     plt.show()
 
 
