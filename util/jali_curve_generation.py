@@ -1005,8 +1005,20 @@ class JaliVoCa_animation():
         return modification_ctrl_pts_sing, modification_sliders_sing
 
 if __name__ == "__main__":
-    dir = "E:/MASC/Sig_videos/cry_me_a_river_ella_fitzgerald"
-    file_name_template = "audio_1"
-    script_path = os.path.join(dir, "audio_1_full.TextGrid")
-    output_template = "jali_MVP"
+    # dir = "E:/MASC/Sig_videos/cry_me_a_river_ella_fitzgerald"
+    # file_name_template = "audio_1"
+    # script_path = os.path.join(dir, "audio_1_full.TextGrid")
+    # output_template = "jali_MVP"
 
+
+    dir = "F:/MASC/Jali_sing/validation/faceware session 2022 Apr 1st/julie_takes/"
+    # tim = Minimal_song_data_structure(dir+"rap.wav", dir+"rap.txt")
+    # tim.compute_self_phoneme_alignment()
+    # tim.write_textgrid(dir, "rap_alignment")
+
+    j = JaliVoCa_animation(dir+"rap.wav", dir+"rap_alignment.TextGrid", "dir" + "jali_MVP")
+    j.generate_curves()
+    # dir = "E:/MASC/Sig_videos/cry_me_a_river_ella_fitzgerald"
+    # file_name_template = "audio_1"
+    # script_path = os.path.join(dir, "audio_1_full.TextGrid")
+    # output_template = "jali_MVP"
